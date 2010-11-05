@@ -2,6 +2,10 @@ Texas Tribune ESI Template Tags
 ===============================
 Simple template tags for handling `edge side include (ESI)`_
 
+.. warning::
+   This document is speculative until this warning is removed.  Don't expect
+   the awesomeness described within as long as this is here.
+
 Hows and Whys
 -------------
 
