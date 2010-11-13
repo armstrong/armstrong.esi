@@ -1,6 +1,6 @@
-Texas Tribune ESI Template Tags
-===============================
-Simple template tags for handling `edge side include (ESI)`_
+Armstrong ESI
+=============
+Django application for handling `edge side include (ESI)`_
 
 .. warning::
    This document is speculative until this warning is removed.  Don't expect
@@ -22,8 +22,9 @@ for a welcome message, you would render that message like::
       </body>
     </html>
 
-A smart proxy such as `Varnish`_ can cache this page, then render it dropping
-in the dynamic portions without having to talk to the app server again.
+A smart proxy such as `Varnish`_ and the middleware included with
+``armstrong.esi`` can cache this page, then render it dropping in the dynamic
+portions without having to talk to the app server again.
 
 Use this package to specify sections of your templates that can be rendered via
 ESI.  You call the ``{% esi %}`` template tag and give it the name of a
@@ -70,6 +71,22 @@ settings::
 
     'tt.templatetags.esi',
 
+You must also enable the custom middleware if you want to use the internal ESI
+caching.  To do this, add the following line to your ``MIDDLEWARE_CLASSES``::
+
+    'armstrong.esi.middleware.ESIHandlerMiddleware',
+
+
+Internal Middleware
+-------------------
+
+Edge-Side Includes are great for increasing the cachability of your pages, but
+they traditionally require additional overhead to get running.
+``armstrong.esi`` includes a middleware that can handle the caching for you so
+you don't have to setup and maintain any additional server hardware.
+
+.. todo:: add information explaining what is happening
+
 
 Contributing
 ------------
@@ -77,8 +94,7 @@ Contributions are welcomed and encouraged.  Please follow these instructions
 for making a contribution:
 
 * Fork this repository
-* Create a topic branch off of the ``master`` branch.  Be descriptive with
-  its name.
+* Create a topic branch.  Be descriptive with its name.
 * Make some great addition, fix a bug, or clean it up
 * Submit a Pull Request
 
