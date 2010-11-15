@@ -16,6 +16,13 @@ class TestOfEsiNode(TestCase):
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
+    def test_sets_esi_was_invoked_to_true_on_context(self):
+        context = {}
+        node = EsiNode('hello_world')
+        node.render(context)
+
+        self.assert_(context['_esi_was_invoked'])
+
 class TestOfEsiHandler(TestCase):
     def test_extracts_view_out_of_templatetag_call(self):
         random_view_name = 'hello_world_%d' % random.randint(100, 200)
