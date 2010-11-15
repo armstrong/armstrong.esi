@@ -18,6 +18,8 @@ def with_fake_request(func):
 class TestCase(DjangoTestCase):
     def setUp(self):
         self._original_settings = settings
+        fudge.clear_expectations()
+        fudge.clear_calls()
 
     def tearDown(self):
         settings = self._original_settings
