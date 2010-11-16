@@ -21,9 +21,9 @@ class RequestMiddleware(BaseEsiMiddleware):
         for url, (view, args, kwargs) in data['urls'].items():
             esi_tag = '<esi:include src="%s" />' % url
             replacement = view(request, *args, **kwargs)
-            data['contents'] = data['contents'].replace(esi_tag, str(replacement))
+            data['content'] = data['content'].replace(esi_tag, str(replacement))
 
-        return HttpResponse(content=data['contents'])
+        return HttpResponse(content=data['content'])
 
 class ResponseMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
@@ -38,7 +38,7 @@ class ResponseMiddleware(BaseEsiMiddleware):
                 esi_tag = '<esi:include src="%s" />' % url
                 response.content = response.content.replace(esi_tag, str(new_content))
             cache.set(request.get_full_path(), {
-                'contents': original_content,
+                'content': original_content,
                 'urls': urls,
             })
         return response

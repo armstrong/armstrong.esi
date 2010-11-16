@@ -100,7 +100,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         response.content = esi_tag
 
         expected_cache_data = {
-            'contents': response.content,
+            'content': response.content,
             'urls': {url: (view, (), {})},
         }
         fake_cache = fudge.Fake(middleware.cache)
@@ -175,7 +175,7 @@ class TestOfRequestMiddleware(TestCase):
         resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
 
         cached_data = {
-            'contents': '<esi:include src="%s" />' % url,
+            'content': '<esi:include src="%s" />' % url,
             'urls': {url: (view, (), {})},
         }
 
