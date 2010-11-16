@@ -13,11 +13,11 @@ class ResponseMiddleware(object):
     def process_response(self, request, response):
         if request._esi_was_invoked:
             esi_urls = re.findall(r'<esi:include src="([^"]+)" />', response.content)
-            urls = []
+            urls = {}
             original_content = response.content
             for url in esi_urls:
                 (view, args, kwargs) = self.resolver.resolve(url)
-                urls.append((view, args, kwargs))
+                urls[url] = (view, args, kwargs)
                 new_content = view(request, *args, **kwargs)
                 esi_tag = '<esi:include src="%s" />' % url
                 response.content = response.content.replace(esi_tag, str(new_content))
