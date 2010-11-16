@@ -8,7 +8,7 @@ class BaseEsiMiddleware(object):
         self.resolver = resolver
 
     def process_request(self, request):
-        request._esi_was_invoked = False
+        request._esi_was_invoked = {}
 
 class RequestMiddleware(BaseEsiMiddleware):
     def process_request(self, request):
@@ -21,7 +21,7 @@ class RequestMiddleware(BaseEsiMiddleware):
         for url, (view, args, kwargs) in data['urls'].items():
             esi_tag = '<esi:include src="%s" />' % url
             replacement = view(request, *args, **kwargs)
-            data['content'] = data['content'].replace(esi_tag, str(replacement))
+            data['content'] = data['content'].replace(esi_tag, replacement.content)
 
         return HttpResponse(content=data['content'])
 
@@ -36,7 +36,7 @@ class ResponseMiddleware(BaseEsiMiddleware):
                 urls[url] = (view, args, kwargs)
                 new_content = view(request, *args, **kwargs)
                 esi_tag = '<esi:include src="%s" />' % url
-                response.content = response.content.replace(esi_tag, str(new_content))
+                response.content = response.content.replace(esi_tag, new_content.content)
             cache.set(request.get_full_path(), {
                 'content': original_content,
                 'urls': urls,

@@ -40,6 +40,8 @@ class TestOfResponseEsiMiddleware(TestCase):
     def test_uses_whatever_resolver_was_provided(self, request):
         request._esi_was_invoked = True
         view = fudge.Fake(expect_call=True)
+        view.has_attr(content='')
+        view.returns(view)
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args('/hello/').returns((view, (), {}))
         response = fudge.Fake(HttpResponse)
@@ -67,7 +69,8 @@ class TestOfResponseEsiMiddleware(TestCase):
         url = '/hello-with-random-%d/' % rand
 
         view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(rand)
+        view.with_args(request).returns(view)
+        view.has_attr(content=str(rand))
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args(url).returns((view, (), {}))
 
@@ -92,7 +95,8 @@ class TestOfResponseEsiMiddleware(TestCase):
         request.expects('get_full_path').returns(public_url)
 
         view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(rand)
+        view.with_args(request).returns(view)
+        view.has_attr(content=str(rand))
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args(url).returns((view, (), {}))
 
@@ -126,7 +130,8 @@ class TestOfResponseEsiMiddleware(TestCase):
         request.expects('get_full_path').returns(public_url)
 
         view = fudge.Fake(expect_call=True)
-        view.with_args(request, foo).returns(rand)
+        view.with_args(request, foo).returns(view)
+        view.has_attr(content=str(rand))
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args(url).returns((view, (foo, ), {}))
 
@@ -149,7 +154,8 @@ class TestOfResponseEsiMiddleware(TestCase):
         request.expects('get_full_path').returns(public_url)
 
         view = fudge.Fake(expect_call=True)
-        view.with_args(request, value=foo).returns(rand)
+        view.with_args(request, value=foo).returns(view)
+        view.has_attr(content=str(rand))
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
 
@@ -171,7 +177,8 @@ class TestOfRequestMiddleware(TestCase):
         url = '/hello-with-random-%d/' % rand
 
         view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(rand)
+        view.with_args(request).returns(view)
+        view.has_attr(content=str(rand))
         resolver = fudge.Fake()
         resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
 

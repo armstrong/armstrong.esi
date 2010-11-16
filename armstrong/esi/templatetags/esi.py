@@ -8,7 +8,7 @@ class EsiNode(template.Node):
         self.view_name = view_name
 
     def render(self, context):
-        context['_esi_was_invoked'] = True
+        context['_esi_was_invoked']['url'] = reverse(self.view_name)
         return '<esi:include src="%s" />' % reverse(self.view_name)
 
 @register.tag
