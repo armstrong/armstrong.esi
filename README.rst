@@ -74,7 +74,7 @@ settings::
 You must also enable the custom middleware if you want to use the internal ESI
 caching.  To do this, add the following line to your ``MIDDLEWARE_CLASSES``::
 
-    'armstrong.esi.middleware.ESIHandlerMiddleware',
+    'armstrong.esi.middleware.EsiMiddleware',
 
 
 Internal Middleware
