@@ -1,15 +1,31 @@
 from django.core import urlresolvers
 from django.core.cache import cache
+from django.http import HttpResponse
 import re
 
 class BaseEsiMiddleware(object):
-    def process_request(self, request):
-        request._esi_was_invoked = False
-
-class ResponseMiddleware(object):
     def __init__(self, resolver=urlresolvers):
         self.resolver = resolver
 
+    def process_request(self, request):
+        request._esi_was_invoked = False
+
+class RequestMiddleware(BaseEsiMiddleware):
+    def process_request(self, request):
+        super(RequestMiddleware, self).process_request(request)
+
+        data = cache.get(request.get_full_path())
+        if not data:
+            return None
+
+        for url, (view, args, kwargs) in data['urls'].items():
+            esi_tag = '<esi:include src="%s" />' % url
+            replacement = view(request, *args, **kwargs)
+            data['contents'] = data['contents'].replace(esi_tag, str(replacement))
+
+        return HttpResponse(content=data['contents'])
+
+class ResponseMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
         if request._esi_was_invoked:
             esi_urls = re.findall(r'<esi:include src="([^"]+)" />', response.content)
@@ -26,3 +42,4 @@ class ResponseMiddleware(object):
                 'urls': urls,
             })
         return response
+

@@ -8,6 +8,7 @@ from ._utils import with_fake_request, with_fake_esi_request, with_fake_non_esi_
 
 from .. import middleware
 from ..middleware import BaseEsiMiddleware
+from ..middleware import RequestMiddleware
 from ..middleware import ResponseMiddleware
 
 class TestOfBaseEsiMiddleware(TestCase):
@@ -158,3 +159,39 @@ class TestOfResponseEsiMiddleware(TestCase):
         obj = ResponseMiddleware(resolver=resolver)
         result = obj.process_response(request, response)
 
+class TestOfRequestMiddleware(TestCase):
+    def test_returns_assembled_HttpResponse_on_cache_hit(self):
+        foo = random.randint(1000, 2000)
+
+        request = fudge.Fake(HttpRequest)
+        request.has_attr(_esi_was_invoked=True)
+        rand = random.randint(100, 200)
+        public_url = '/hello/%d/' % rand
+        url = '/hello-with-random-%d/' % rand
+
+        view = fudge.Fake(expect_call=True)
+        view.with_args(request).returns(rand)
+        resolver = fudge.Fake()
+        resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
+
+        cached_data = {
+            'contents': '<esi:include src="%s" />' % url,
+            'urls': {url: (view, (), {})},
+        }
+
+        request.expects('get_full_path').returns(public_url)
+
+        fake_cache = fudge.Fake(middleware.cache)
+        fake_cache.expects('get').with_args(public_url).returns(cached_data)
+
+        with fudge.patched_context(middleware, 'cache', fake_cache):
+            mw = RequestMiddleware(resolver=resolver)
+            result = mw.process_request(request)
+
+            self.assert_(isinstance(result, HttpResponse))
+            self.assertEquals(result.content, str(rand))
+
+    @with_fake_request
+    def test_returns_None_on_cache_miss(self, request):
+        mw = RequestMiddleware()
+        self.assertEquals(None, mw.process_request(request))
