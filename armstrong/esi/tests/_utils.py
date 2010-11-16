@@ -6,13 +6,28 @@ import fudge
 def with_fake_request(func):
     def inner(self, *args, **kwargs):
         request = fudge.Fake(HttpRequest)
-        fudge.clear_calls()
-
+        request.provides('get_full_path')
         result = func(self, request, *args, **kwargs)
 
         fudge.verify()
         fudge.clear_expectations()
         return result
+    return inner
+
+def with_fake_non_esi_request(func):
+    @with_fake_request
+    def inner(self, request, *args, **kwargs):
+        request.has_attr(_esi_was_invoked=False)
+        fudge.clear_calls()
+        return func(self, request, *args, **kwargs)
+    return inner
+
+def with_fake_esi_request(func):
+    @with_fake_request
+    def inner(self, request, *args, **kwargs):
+        request.has_attr(_esi_was_invoked=True)
+        fudge.clear_calls()
+        return func(self, request, *args, **kwargs)
     return inner
 
 class TestCase(DjangoTestCase):
