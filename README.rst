@@ -64,12 +64,12 @@ Installation
 ------------
 Recommending installation is through `pip`_::
 
-    prompt> pip install -e git://github.com/texastribune/tt.templatetags.esi#egg=tt.templatetags.esi
+    prompt> pip install -e git://github.com/texastribune/armstrong.esi#egg=armstrong.esi
 
 Once installed, you must add the app to your ``INSTALLED_APPS`` inside your
 settings::
 
-    'tt.templatetags.esi',
+    'armstrong.esi',
 
 You must also enable the custom middleware if you want to use the internal ESI
 caching.  To do this, add the following line to your ``MIDDLEWARE_CLASSES``::
@@ -105,7 +105,7 @@ You can also report bugs via `Issue Tracker`_.
 .. _Wikipedia article: http://en.wikipedia.org/wiki/Edge_Side_Includes 
 .. _pip: http://pip.openplans.org
 .. _Varnish: http://www.varnish-cache.org/
-.. _Issue Tracker: https://github.com/texastribune/tt.templatetags.esi/issues
+.. _Issue Tracker: https://github.com/texastribune/armstrong.esi/issues
 
 .. rubric:: Footnotes
 .. [#] http://docs.djangoproject.com/en/1.2/ref/settings/#debug
