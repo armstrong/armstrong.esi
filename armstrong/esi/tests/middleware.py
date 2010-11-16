@@ -8,6 +8,7 @@ from ._utils import with_fake_request, with_fake_esi_request, with_fake_non_esi_
 
 from .. import middleware
 from ..middleware import BaseEsiMiddleware
+from ..middleware import EsiMiddleware
 from ..middleware import RequestMiddleware
 from ..middleware import ResponseMiddleware
 
@@ -195,3 +196,13 @@ class TestOfRequestMiddleware(TestCase):
     def test_returns_None_on_cache_miss(self, request):
         mw = RequestMiddleware()
         self.assertEquals(None, mw.process_request(request))
+
+class TestOfEsiMiddleware(TestCase):
+    def test_extends_RequestMiddleware(self):
+        mw = EsiMiddleware()
+        self.assert_(isinstance(mw, RequestMiddleware))
+
+    def test_extends_ResponseMiddleware(self):
+        mw = EsiMiddleware()
+        self.assert_(isinstance(mw, ResponseMiddleware))
+

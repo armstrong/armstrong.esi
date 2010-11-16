@@ -43,3 +43,6 @@ class ResponseMiddleware(BaseEsiMiddleware):
             })
         return response
 
+class EsiMiddleware(RequestMiddleware, ResponseMiddleware):
+    pass
+
