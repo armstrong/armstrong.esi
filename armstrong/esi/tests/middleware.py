@@ -38,7 +38,9 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     @with_fake_esi_request
     def test_uses_whatever_resolver_was_provided(self, request):
-        request._esi_was_invoked = True
+        request = fudge.Fake(HttpRequest)
+        request._esi_was_invoked = ['/hello/', ]
+        request.provides('get_full_path')
         view = fudge.Fake(expect_call=True)
         view.has_attr(content='')
         view.returns(view)
@@ -63,10 +65,13 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware = ResponseMiddleware(resolver=resolver)
         middleware.process_response(request, response)
 
-    @with_fake_esi_request
-    def test_replaces_esi_tags_with_actual_response(self, request):
+    def test_replaces_esi_tags_with_actual_response(self):
         rand = random.randint(100, 200)
         url = '/hello-with-random-%d/' % rand
+
+        request = fudge.Fake(HttpResponse)
+        request.has_attr(_esi_was_invoked=[url, ])
+        request.provides('get_full_path')
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request).returns(view)
@@ -86,27 +91,26 @@ class TestOfResponseEsiMiddleware(TestCase):
         self.assertEquals(result.content, str(rand))
 
     def test_stores_urls_and_original_content_in_cache(self):
-        request = fudge.Fake(HttpRequest)
-        request.has_attr(_esi_was_invoked=True)
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
-        url = '/hello-with-random-%d/' % rand
 
+        request = fudge.Fake(HttpRequest)
+        request.has_attr(_esi_was_invoked=[public_url, ])
         request.expects('get_full_path').returns(public_url)
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request).returns(view)
         view.has_attr(content=str(rand))
         resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(url).returns((view, (), {}))
+        resolver.expects('resolve').with_args(public_url).returns((view, (), {}))
 
         response = fudge.Fake(HttpResponse)
-        esi_tag = '<esi:include src="%s" />' % url
+        esi_tag = '<esi:include src="%s" />' % public_url
         response.content = esi_tag
 
         expected_cache_data = {
             'content': response.content,
-            'urls': {url: (view, (), {})},
+            'urls': {public_url: (view, (), {})},
         }
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('set').with_args(public_url, expected_cache_data)
@@ -120,14 +124,12 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     def test_passes_any_args_along_as_args_to_view(self):
         foo = random.randint(1000, 2000)
+        rand = random.randint(100, 200)
+        url = '/hello/%d/' % rand
 
         request = fudge.Fake(HttpRequest)
-        request.has_attr(_esi_was_invoked=True)
-        rand = random.randint(100, 200)
-        public_url = '/hello/%d/' % rand
-        url = '/hello-with-random-%d/' % rand
-
-        request.expects('get_full_path').returns(public_url)
+        request.has_attr(_esi_was_invoked=[url, ])
+        request.expects('get_full_path').returns(url)
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request, foo).returns(view)
@@ -144,14 +146,13 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     def test_passes_any_kwargs_along_as_kwargs_to_view(self):
         foo = random.randint(1000, 2000)
+        rand = random.randint(100, 200)
+        url = '/hello/%d/' % rand
 
         request = fudge.Fake(HttpRequest)
-        request.has_attr(_esi_was_invoked=True)
-        rand = random.randint(100, 200)
-        public_url = '/hello/%d/' % rand
-        url = '/hello-with-random-%d/' % rand
+        request.has_attr(_esi_was_invoked=[url, ])
 
-        request.expects('get_full_path').returns(public_url)
+        request.expects('get_full_path').returns(url)
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request, value=foo).returns(view)
@@ -170,11 +171,12 @@ class TestOfRequestMiddleware(TestCase):
     def test_returns_assembled_HttpResponse_on_cache_hit(self):
         foo = random.randint(1000, 2000)
 
-        request = fudge.Fake(HttpRequest)
-        request.has_attr(_esi_was_invoked=True)
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
         url = '/hello-with-random-%d/' % rand
+
+        request = fudge.Fake(HttpRequest)
+        request.has_attr(_esi_was_invoked=['url', ])
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request).returns(view)

@@ -11,13 +11,13 @@ from ...templatetags.esi import esi
 class TestOfEsiNode(TestCase):
     def test_renders_actual_code(self):
         node = EsiNode('hello_world')
-        result = node.render({'_esi_was_invoked': {}})
+        result = node.render({'_esi_was_invoked': []})
 
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
     def test_sets_esi_was_invoked_to_true_on_context(self):
-        context = {'_esi_was_invoked': {}}
+        context = {'_esi_was_invoked': []}
         node = EsiNode('hello_world')
         node.render(context)
 
@@ -47,7 +47,7 @@ class TestOfEsiHandler(TestCase):
         """
 
         t = template.Template(raw_template)
-        result = t.render(template.Context({'_esi_was_invoked': {}})).strip()
+        result = t.render(template.Context({'_esi_was_invoked': []})).strip()
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 

@@ -8,8 +8,9 @@ class EsiNode(template.Node):
         self.view_name = view_name
 
     def render(self, context):
-        context['_esi_was_invoked']['url'] = reverse(self.view_name)
-        return '<esi:include src="%s" />' % reverse(self.view_name)
+        url = reverse(self.view_name)
+        context['_esi_was_invoked'].append(url)
+        return '<esi:include src="%s" />' % url
 
 @register.tag
 def esi(parser, token):

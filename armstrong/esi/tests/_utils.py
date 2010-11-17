@@ -17,7 +17,7 @@ def with_fake_request(func):
 def with_fake_non_esi_request(func):
     @with_fake_request
     def inner(self, request, *args, **kwargs):
-        request.has_attr(_esi_was_invoked=False)
+        request.has_attr(_esi_was_invoked=[])
         fudge.clear_calls()
         return func(self, request, *args, **kwargs)
     return inner
@@ -25,7 +25,7 @@ def with_fake_non_esi_request(func):
 def with_fake_esi_request(func):
     @with_fake_request
     def inner(self, request, *args, **kwargs):
-        request.has_attr(_esi_was_invoked=True)
+        request.has_attr(_esi_was_invoked=[])
         fudge.clear_calls()
         return func(self, request, *args, **kwargs)
     return inner

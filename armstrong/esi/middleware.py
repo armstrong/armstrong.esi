@@ -8,7 +8,7 @@ class BaseEsiMiddleware(object):
         self.resolver = resolver
 
     def process_request(self, request):
-        request._esi_was_invoked = {}
+        request._esi_was_invoked = []
 
 class RequestMiddleware(BaseEsiMiddleware):
     def process_request(self, request):
@@ -28,10 +28,9 @@ class RequestMiddleware(BaseEsiMiddleware):
 class ResponseMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
         if request._esi_was_invoked:
-            esi_urls = re.findall(r'<esi:include src="([^"]+)" />', response.content)
             urls = {}
             original_content = response.content
-            for url in esi_urls:
+            for url in request._esi_was_invoked:
                 (view, args, kwargs) = self.resolver.resolve(url)
                 urls[url] = (view, args, kwargs)
                 new_content = view(request, *args, **kwargs)
