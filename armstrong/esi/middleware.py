@@ -4,9 +4,6 @@ from django.http import HttpResponse
 import re
 
 class BaseEsiMiddleware(object):
-    def __init__(self, resolver=urlresolvers):
-        self.resolver = resolver
-
     def process_request(self, request):
         request._esi_was_invoked = []
 
@@ -26,6 +23,9 @@ class RequestMiddleware(BaseEsiMiddleware):
         return HttpResponse(content=data['content'])
 
 class ResponseMiddleware(BaseEsiMiddleware):
+    def __init__(self, resolver=urlresolvers):
+        self.resolver = resolver
+
     def process_response(self, request, response):
         if request._esi_was_invoked:
             urls = {}

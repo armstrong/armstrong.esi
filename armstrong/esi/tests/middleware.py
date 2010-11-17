@@ -7,33 +7,34 @@ from ._utils import TestCase
 from ._utils import with_fake_request, with_fake_esi_request, with_fake_non_esi_request
 
 from .. import middleware
-from ..middleware import BaseEsiMiddleware
 from ..middleware import EsiMiddleware
 from ..middleware import RequestMiddleware
 from ..middleware import ResponseMiddleware
 
-class TestOfBaseEsiMiddleware(TestCase):
+class TestOfResponseEsiMiddleware(TestCase):
+    class_under_test = ResponseMiddleware
+
     @with_fake_request
     def test_adds_esi_token_to_request_object(self, request):
 
         self.assertFalse(hasattr(request, '_esi_was_invoked'), msg='sanity check')
 
-        middleware = BaseEsiMiddleware()
+        middleware = self.class_under_test()
         middleware.process_request(request)
 
         self.assertTrue(hasattr(request, '_esi_was_invoked'))
 
-    @with_fake_request
-    def test_esi_token_is_false_by_default(self, request):
-        middleware = BaseEsiMiddleware()
+    def test_esi_token_is_false_by_default(self):
+        request = HttpRequest()
+
+        middleware = self.class_under_test()
         middleware.process_request(request)
         self.assertFalse(request._esi_was_invoked)
 
-class TestOfResponseEsiMiddleware(TestCase):
     @with_fake_non_esi_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
         response = random.randint(1000, 2000)
-        middleware = ResponseMiddleware()
+        middleware = self.class_under_test()
         self.assert_(response is middleware.process_response(request, response))
 
     @with_fake_esi_request
@@ -51,7 +52,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         fudge.clear_calls()
 
-        middleware = ResponseMiddleware(resolver=resolver)
+        middleware = self.class_under_test(resolver=resolver)
         middleware.process_response(request, response)
 
     @with_fake_non_esi_request
@@ -62,7 +63,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         fudge.clear_calls()
 
         self.assertFalse(request._esi_was_invoked, msg='sanity check')
-        middleware = ResponseMiddleware(resolver=resolver)
+        middleware = self.class_under_test(resolver=resolver)
         middleware.process_response(request, response)
 
     def test_replaces_esi_tags_with_actual_response(self):
@@ -84,7 +85,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         response.content = esi_tag
         fudge.clear_calls()
 
-        middleware = ResponseMiddleware(resolver=resolver)
+        middleware = self.class_under_test(resolver=resolver)
         result = middleware.process_response(request, response)
 
         self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
@@ -116,7 +117,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         fake_cache.expects('set').with_args(public_url, expected_cache_data)
 
         with fudge.patched_context(middleware, 'cache', fake_cache):
-            obj = ResponseMiddleware(resolver=resolver)
+            obj = self.class_under_test(resolver=resolver)
             result = obj.process_response(request, response)
 
             self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
@@ -141,7 +142,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
 
-        obj = ResponseMiddleware(resolver=resolver)
+        obj = self.class_under_test(resolver=resolver)
         result = obj.process_response(request, response)
 
     def test_passes_any_kwargs_along_as_kwargs_to_view(self):
@@ -164,10 +165,12 @@ class TestOfResponseEsiMiddleware(TestCase):
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
 
-        obj = ResponseMiddleware(resolver=resolver)
+        obj = self.class_under_test(resolver=resolver)
         result = obj.process_response(request, response)
 
 class TestOfRequestMiddleware(TestCase):
+    class_under_test = RequestMiddleware
+
     def test_returns_assembled_HttpResponse_on_cache_hit(self):
         foo = random.randint(1000, 2000)
 
@@ -195,7 +198,7 @@ class TestOfRequestMiddleware(TestCase):
         fake_cache.expects('get').with_args(public_url).returns(cached_data)
 
         with fudge.patched_context(middleware, 'cache', fake_cache):
-            mw = RequestMiddleware(resolver=resolver)
+            mw = self.class_under_test()
             result = mw.process_request(request)
 
             self.assert_(isinstance(result, HttpResponse))
@@ -203,10 +206,16 @@ class TestOfRequestMiddleware(TestCase):
 
     @with_fake_request
     def test_returns_None_on_cache_miss(self, request):
-        mw = RequestMiddleware()
-        self.assertEquals(None, mw.process_request(request))
+        fake_cache = fudge.Fake(middleware.cache)
+        fake_cache.expects('get').returns(None)
 
-class TestOfEsiMiddleware(TestCase):
+        with fudge.patched_context(middleware, 'cache', fake_cache):
+            mw = self.class_under_test()
+            self.assertEquals(None, mw.process_request(request))
+
+class TestOfEsiMiddleware(TestOfRequestMiddleware, TestOfResponseEsiMiddleware):
+    class_under_test = EsiMiddleware
+
     def test_extends_RequestMiddleware(self):
         mw = EsiMiddleware()
         self.assert_(isinstance(mw, RequestMiddleware))
@@ -214,4 +223,5 @@ class TestOfEsiMiddleware(TestCase):
     def test_extends_ResponseMiddleware(self):
         mw = EsiMiddleware()
         self.assert_(isinstance(mw, ResponseMiddleware))
+
 
