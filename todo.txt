@@ -1,4 +1,5 @@
 Known Issues/Tasks:
+  - Add ability to process request through full middleware
   - Add ability to regenerate cache while serving old content
   - Handle more than default mime-types
   ✓ Switch from use of contents to content
