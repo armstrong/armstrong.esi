@@ -6,6 +6,11 @@ Django application for handling `edge side include (ESI)`_
    This document is speculative until this warning is removed.  Don't expect
    the awesomeness described within as long as this is here.
 
+.. warning::
+   This is a proof of concept level package.  Don't use it in production unless
+   you're willing to put up with potentially buggy code, bad performance, and
+   all manner of things going wrong.  If you're cool by that, go for it.
+
 Hows and Whys
 -------------
 
