@@ -4,7 +4,7 @@ from django.http import HttpResponse
 import re
 
 
-def replace_esi_tags(content, url_data):
+def replace_esi_tags(request, content, url_data):
     for url, (view, args, kwargs) in url_data.items():
         esi_tag = '<esi:include src="%s" />' % url
         replacement = view(request, *args, **kwargs)
@@ -23,7 +23,7 @@ class RequestMiddleware(BaseEsiMiddleware):
         if not data:
             return None
 
-        content = replace_esi_tags(data['content'], data['urls'])
+        content = replace_esi_tags(request, data['content'], data['urls'])
         return HttpResponse(content=content)
 
 class ResponseMiddleware(BaseEsiMiddleware):
@@ -37,7 +37,7 @@ class ResponseMiddleware(BaseEsiMiddleware):
             for url in request._esi_was_invoked:
                 (view, args, kwargs) = self.resolver.resolve(url)
                 urls[url] = (view, args, kwargs)
-            response.content = replace_esi_tags(response.content, urls)
+            response.content = replace_esi_tags(request, response.content, urls)
             cache.set(request.get_full_path(), {
                 'content': original_content,
                 'urls': urls,
