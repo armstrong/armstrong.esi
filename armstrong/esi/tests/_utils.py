@@ -7,6 +7,7 @@ def with_fake_request(func):
     def inner(self, *args, **kwargs):
         request = fudge.Fake(HttpRequest)
         request.provides('get_full_path')
+        request.has_attr(COOKIES={})
         result = func(self, request, *args, **kwargs)
 
         fudge.verify()
@@ -14,15 +15,11 @@ def with_fake_request(func):
         return result
     return inner
 
-def with_fake_non_esi_request(func):
-    @with_fake_request
-    def inner(self, request, *args, **kwargs):
-        request.has_attr(_esi_was_invoked=[])
-        fudge.clear_calls()
-        return func(self, request, *args, **kwargs)
-    return inner
-
 def with_fake_esi_request(func):
+    '''
+    Passes along a fake request that looks like it has already gone through
+    the RequestMiddleware.
+    '''
     @with_fake_request
     def inner(self, request, *args, **kwargs):
         request.has_attr(_esi_was_invoked=[])

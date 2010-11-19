@@ -4,7 +4,7 @@ import fudge
 import random
 
 from ._utils import TestCase
-from ._utils import with_fake_request, with_fake_esi_request, with_fake_non_esi_request
+from ._utils import with_fake_request, with_fake_esi_request
 
 from .. import middleware
 from ..middleware import EsiMiddleware
@@ -31,7 +31,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware.process_request(request)
         self.assertFalse(request._esi_was_invoked)
 
-    @with_fake_non_esi_request
+    @with_fake_esi_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
         response = random.randint(1000, 2000)
         middleware = self.class_under_test()
@@ -39,7 +39,6 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     @with_fake_esi_request
     def test_uses_whatever_resolver_was_provided(self, request):
-        request = fudge.Fake(HttpRequest)
         request._esi_was_invoked = ['/hello/', ]
         request.provides('get_full_path')
         view = fudge.Fake(expect_call=True)
@@ -55,7 +54,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware = self.class_under_test(resolver=resolver)
         middleware.process_response(request, response)
 
-    @with_fake_non_esi_request
+    @with_fake_esi_request
     def test_skips_talking_to_the_resolver_on_non_esi_response(self, request):
         resolver = fudge.Fake()
         response = fudge.Fake()
@@ -66,13 +65,12 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware = self.class_under_test(resolver=resolver)
         middleware.process_response(request, response)
 
-    def test_replaces_esi_tags_with_actual_response(self):
+    @with_fake_request
+    def test_replaces_esi_tags_with_actual_response(self, request):
         rand = random.randint(100, 200)
         url = '/hello-with-random-%d/' % rand
 
-        request = fudge.Fake(HttpResponse)
         request.has_attr(_esi_was_invoked=[url, ])
-        request.provides('get_full_path')
 
         view = fudge.Fake(expect_call=True)
         view.with_args(request).returns(view)
@@ -91,11 +89,11 @@ class TestOfResponseEsiMiddleware(TestCase):
         self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
         self.assertEquals(result.content, str(rand))
 
-    def test_stores_urls_and_original_content_in_cache(self):
+    @with_fake_request
+    def test_stores_urls_and_original_content_in_cache(self, request):
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
 
-        request = fudge.Fake(HttpRequest)
         request.has_attr(_esi_was_invoked=[public_url, ])
         request.expects('get_full_path').returns(public_url)
 
@@ -123,12 +121,12 @@ class TestOfResponseEsiMiddleware(TestCase):
             self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
             self.assertEquals(result.content, str(rand), msg='sanity check')
 
-    def test_passes_any_args_along_as_args_to_view(self):
+    @with_fake_request
+    def test_passes_any_args_along_as_args_to_view(self, request):
         foo = random.randint(1000, 2000)
         rand = random.randint(100, 200)
         url = '/hello/%d/' % rand
 
-        request = fudge.Fake(HttpRequest)
         request.has_attr(_esi_was_invoked=[url, ])
         request.expects('get_full_path').returns(url)
 
@@ -145,14 +143,13 @@ class TestOfResponseEsiMiddleware(TestCase):
         obj = self.class_under_test(resolver=resolver)
         result = obj.process_response(request, response)
 
-    def test_passes_any_kwargs_along_as_kwargs_to_view(self):
+    @with_fake_request
+    def test_passes_any_kwargs_along_as_kwargs_to_view(self, request):
         foo = random.randint(1000, 2000)
         rand = random.randint(100, 200)
         url = '/hello/%d/' % rand
 
-        request = fudge.Fake(HttpRequest)
         request.has_attr(_esi_was_invoked=[url, ])
-
         request.expects('get_full_path').returns(url)
 
         view = fudge.Fake(expect_call=True)
@@ -171,14 +168,14 @@ class TestOfResponseEsiMiddleware(TestCase):
 class TestOfRequestMiddleware(TestCase):
     class_under_test = RequestMiddleware
 
-    def test_returns_assembled_HttpResponse_on_cache_hit(self):
+    @with_fake_request
+    def test_returns_assembled_HttpResponse_on_cache_hit(self, request):
         foo = random.randint(1000, 2000)
 
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
         url = '/hello-with-random-%d/' % rand
 
-        request = fudge.Fake(HttpRequest)
         request.has_attr(_esi_was_invoked=['url', ])
 
         view = fudge.Fake(expect_call=True)
