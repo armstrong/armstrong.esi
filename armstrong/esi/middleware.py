@@ -3,14 +3,14 @@ from django.core.cache import cache
 from django.http import HttpResponse
 import re
 
-from . import http
+from . import http_client
 
 
 def replace_esi_tags(request, content, url_data):
     for url, (view, args, kwargs) in url_data.items():
-        client = http.Client(cookies=request.COOKIES)
         esi_tag = '<esi:include src="%s" />' % url
-        replacement = client.get(url)
+        client = http_client.Client(cookies=request.COOKIES)
+        replacement = http_client.get(url)
         content = content.replace(esi_tag, replacement.content)
     return content
 
