@@ -171,9 +171,6 @@ class Client(object):
         self.exc_info = None
         self.errors = StringIO()
 
-    def store_exc_info(self, **kwargs):
-        pass
-
     def _session(self):
         """
         Obtains the current session variables.
@@ -193,7 +190,6 @@ class Client(object):
         Assumes defaults for the query environment, which can be overridden
         using the arguments to the request.
         """
-        from django.test import signals
         environ = {
             'HTTP_COOKIE':       self.cookies.output(header='', sep='; '),
             'PATH_INFO':         '/',
@@ -214,11 +210,6 @@ class Client(object):
         environ.update(self.defaults)
         environ.update(request)
 
-        # Curry a data dictionary into an instance of the template renderer
-        # callback function.
-        data = {}
-        on_template_render = curry(store_rendered_templates, data)
-        signals.template_rendered.connect(on_template_render, dispatch_uid="template-render")
         # Capture exceptions created by the handler.
         got_request_exception.connect(self.store_exc_info, dispatch_uid="request-exception")
         try:
@@ -235,38 +226,12 @@ class Client(object):
                 if e.args != ('500.html',):
                     raise
 
-            # Look for a signalled exception, clear the current context
-            # exception data, then re-raise the signalled exception.
-            # Also make sure that the signalled exception is cleared from
-            # the local cache!
-            if self.exc_info:
-                exc_info = self.exc_info
-                self.exc_info = None
-                raise exc_info[1], None, exc_info[2]
-
-            # Save the client and request that stimulated the response.
-            response.client = self
-            response.request = request
-
-            # Add any rendered template detail to the response.
-            # If there was only one template rendered (the most likely case),
-            # flatten the list to a single element.
-            for detail in ('template', 'context'):
-                if data.get(detail):
-                    if len(data[detail]) == 1:
-                        setattr(response, detail, data[detail][0]);
-                    else:
-                        setattr(response, detail, data[detail])
-                else:
-                    setattr(response, detail, None)
-
             # Update persistent cookie data.
             if response.cookies:
                 self.cookies.update(response.cookies)
 
             return response
         finally:
-            signals.template_rendered.disconnect(dispatch_uid="template-render")
             got_request_exception.disconnect(dispatch_uid="request-exception")
 
 
