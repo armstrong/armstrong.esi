@@ -3,6 +3,14 @@ from django.core.cache import cache
 from django.http import HttpResponse
 import re
 
+
+def replace_esi_tags(content, url_data):
+    for url, (view, args, kwargs) in url_data.items():
+        esi_tag = '<esi:include src="%s" />' % url
+        replacement = view(request, *args, **kwargs)
+        content = content.replace(esi_tag, replacement.content)
+    return content
+
 class BaseEsiMiddleware(object):
     def process_request(self, request):
         request._esi_was_invoked = []
@@ -15,12 +23,8 @@ class RequestMiddleware(BaseEsiMiddleware):
         if not data:
             return None
 
-        for url, (view, args, kwargs) in data['urls'].items():
-            esi_tag = '<esi:include src="%s" />' % url
-            replacement = view(request, *args, **kwargs)
-            data['content'] = data['content'].replace(esi_tag, replacement.content)
-
-        return HttpResponse(content=data['content'])
+        content = replace_esi_tags(data['content'], data['urls'])
+        return HttpResponse(content=content)
 
 class ResponseMiddleware(BaseEsiMiddleware):
     def __init__(self, resolver=urlresolvers):
@@ -33,9 +37,7 @@ class ResponseMiddleware(BaseEsiMiddleware):
             for url in request._esi_was_invoked:
                 (view, args, kwargs) = self.resolver.resolve(url)
                 urls[url] = (view, args, kwargs)
-                new_content = view(request, *args, **kwargs)
-                esi_tag = '<esi:include src="%s" />' % url
-                response.content = response.content.replace(esi_tag, new_content.content)
+            response.content = replace_esi_tags(response.content, urls)
             cache.set(request.get_full_path(), {
                 'content': original_content,
                 'urls': urls,
