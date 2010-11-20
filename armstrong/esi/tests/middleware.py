@@ -12,6 +12,8 @@ from ..middleware import EsiMiddleware
 from ..middleware import RequestMiddleware
 from ..middleware import ResponseMiddleware
 
+from .esi_support.views import hello
+
 class TestOfResponseEsiMiddleware(TestCase):
     class_under_test = ResponseMiddleware
 
@@ -65,19 +67,13 @@ class TestOfResponseEsiMiddleware(TestCase):
         request.has_attr(_esi_was_invoked=[public_url, ])
         request.expects('get_full_path').returns(public_url)
 
-        view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(view)
-        view.has_attr(content=str(rand))
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(public_url).returns((view, (), {}))
-
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % public_url
         response.content = esi_tag
 
         expected_cache_data = {
             'content': response.content,
-            'urls': {public_url: (view, (), {})},
+            'urls': {public_url: (hello, (), {'number': str(rand)})},
         }
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('set').with_args(public_url, expected_cache_data)
@@ -103,7 +99,6 @@ class TestOfRequestMiddleware(TestCase):
 
         request.has_attr(_esi_was_invoked=['url', ])
 
-        from armstrong.esi.tests.esi_support.views import hello
         cached_data = {
             'content': '<esi:include src="%s" />' % url,
             'urls': {url: (hello, (), {})},
