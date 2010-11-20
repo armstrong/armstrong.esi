@@ -6,8 +6,8 @@ import re
 from . import http_client
 
 
-def replace_esi_tags(request, content, url_data):
-    for url, (view, args, kwargs) in url_data.items():
+def replace_esi_tags(request, content, urls):
+    for url in urls:
         esi_tag = '<esi:include src="%s" />' % url
         client = http_client.Client(cookies=request.COOKIES)
         replacement = client.get(url)
@@ -32,15 +32,12 @@ class RequestMiddleware(BaseEsiMiddleware):
 class ResponseMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
         if request._esi_was_invoked:
-            urls = {}
             original_content = response.content
-            for url in request._esi_was_invoked:
-                (view, args, kwargs) = resolve(url)
-                urls[url] = (view, args, kwargs)
-            response.content = replace_esi_tags(request, response.content, urls)
+            response.content = replace_esi_tags(request, response.content,
+                                                request._esi_was_invoked)
             cache.set(request.get_full_path(), {
                 'content': original_content,
-                'urls': urls,
+                'urls': request._esi_was_invoked,
             })
         return response
 

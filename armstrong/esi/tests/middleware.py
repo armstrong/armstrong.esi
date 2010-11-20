@@ -73,7 +73,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         expected_cache_data = {
             'content': response.content,
-            'urls': {public_url: (hello, (), {'number': str(rand)})},
+            'urls': [public_url],
         }
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('set').with_args(public_url, expected_cache_data)
