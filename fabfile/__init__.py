@@ -9,6 +9,7 @@ settings = {
         'armstrong.esi.context_processors.esi',
     ],
     'ROOT_URLCONF': 'armstrong.esi.tests.esi_support.urls',
+    'DEBUG_PROPAGATE_EXCEPTIONS': True,
 }
 
 @task
