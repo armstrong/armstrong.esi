@@ -89,49 +89,6 @@ class TestOfResponseEsiMiddleware(TestCase):
             self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
             self.assertEquals(result.content, str(rand), msg='sanity check')
 
-    @with_fake_request
-    def test_passes_any_args_along_as_args_to_view(self, request):
-        foo = random.randint(1000, 2000)
-        rand = random.randint(100, 200)
-        url = '/hello/%d/' % rand
-
-        request.has_attr(_esi_was_invoked=[url, ])
-        request.expects('get_full_path').returns(url)
-
-        view = fudge.Fake(expect_call=True)
-        view.with_args(request, foo).returns(view)
-        view.has_attr(content=str(rand))
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(url).returns((view, (foo, ), {}))
-
-        response = fudge.Fake(HttpResponse)
-        esi_tag = '<esi:include src="%s" />' % url
-        response.content = esi_tag
-
-        obj = self.class_under_test()
-        result = obj.process_response(request, response)
-
-    @with_fake_request
-    def test_passes_any_kwargs_along_as_kwargs_to_view(self, request):
-        foo = random.randint(1000, 2000)
-        rand = random.randint(100, 200)
-        url = '/hello/%d/' % rand
-
-        request.has_attr(_esi_was_invoked=[url, ])
-        request.expects('get_full_path').returns(url)
-
-        view = fudge.Fake(expect_call=True)
-        view.with_args(request, value=foo).returns(view)
-        view.has_attr(content=str(rand))
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
-
-        response = fudge.Fake(HttpResponse)
-        esi_tag = '<esi:include src="%s" />' % url
-        response.content = esi_tag
-
-        obj = self.class_under_test()
-        result = obj.process_response(request, response)
 
 class TestOfRequestMiddleware(TestCase):
     class_under_test = RequestMiddleware
