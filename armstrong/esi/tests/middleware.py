@@ -2,6 +2,7 @@ from django.http import HttpRequest
 from django.http import HttpResponse
 import fudge
 import random
+import re
 
 from ._utils import TestCase
 from ._utils import with_fake_request, with_fake_esi_request
@@ -53,7 +54,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware = self.class_under_test()
         result = middleware.process_response(request, response)
 
-        self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
+        self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
 
     @with_fake_request
@@ -85,7 +86,7 @@ class TestOfResponseEsiMiddleware(TestCase):
             obj = self.class_under_test()
             result = obj.process_response(request, response)
 
-            self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
+            self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
             self.assertEquals(result.content, str(rand), msg='sanity check')
 
     @with_fake_request
