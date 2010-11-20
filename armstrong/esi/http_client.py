@@ -22,13 +22,11 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.core.signals import got_request_exception
 from django.http import SimpleCookie, HttpRequest, QueryDict
 from django.template import TemplateDoesNotExist
-from django.utils.functional import curry
 from django.utils.encoding import smart_str
 from django.utils.http import urlencode
 from django.utils.importlib import import_module
 from django.utils.itercompat import is_iterable
 from django.db import transaction, close_connection
-from django.test.utils import ContextList
 
 BOUNDARY = 'BoUnDaRyStRiNg'
 MULTIPART_CONTENT = 'multipart/form-data; boundary=%s' % BOUNDARY
