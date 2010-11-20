@@ -207,29 +207,23 @@ class Client(object):
         environ.update(self.defaults)
         environ.update(request)
 
-        # Capture exceptions created by the handler.
-        got_request_exception.connect(self.store_exc_info, dispatch_uid="request-exception")
         try:
+            response = self.handler(environ)
+        except TemplateDoesNotExist, e:
+            # If the view raises an exception, Django will attempt to show
+            # the 500.html template. If that template is not available,
+            # we should ignore the error in favor of re-raising the
+            # underlying exception that caused the 500 error. Any other
+            # template found to be missing during view error handling
+            # should be reported as-is.
+            if e.args != ('500.html',):
+                raise
 
-            try:
-                response = self.handler(environ)
-            except TemplateDoesNotExist, e:
-                # If the view raises an exception, Django will attempt to show
-                # the 500.html template. If that template is not available,
-                # we should ignore the error in favor of re-raising the
-                # underlying exception that caused the 500 error. Any other
-                # template found to be missing during view error handling
-                # should be reported as-is.
-                if e.args != ('500.html',):
-                    raise
+        # Update persistent cookie data.
+        if response.cookies:
+            self.cookies.update(response.cookies)
 
-            # Update persistent cookie data.
-            if response.cookies:
-                self.cookies.update(response.cookies)
-
-            return response
-        finally:
-            got_request_exception.disconnect(dispatch_uid="request-exception")
+        return response
 
 
     def get(self, path, data={}, follow=False, **extra):
