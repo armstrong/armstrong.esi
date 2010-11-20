@@ -37,34 +37,6 @@ class TestOfResponseEsiMiddleware(TestCase):
         middleware = self.class_under_test()
         self.assert_(response is middleware.process_response(request, response))
 
-    @with_fake_esi_request
-    def test_uses_whatever_resolver_was_provided(self, request):
-        request._esi_was_invoked = ['/hello/', ]
-        request.provides('get_full_path')
-        view = fudge.Fake(expect_call=True)
-        view.has_attr(content='')
-        view.returns(view)
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args('/hello/').returns((view, (), {}))
-        response = fudge.Fake(HttpResponse)
-        response.content = '<esi:include src="/hello/" />'
-
-        fudge.clear_calls()
-
-        middleware = self.class_under_test()
-        middleware.process_response(request, response)
-
-    @with_fake_esi_request
-    def test_skips_talking_to_the_resolver_on_non_esi_response(self, request):
-        resolver = fudge.Fake()
-        response = fudge.Fake()
-        response.has_attr(content='<esi:include src="/hello/" />')
-        fudge.clear_calls()
-
-        self.assertFalse(request._esi_was_invoked, msg='sanity check')
-        middleware = self.class_under_test()
-        middleware.process_response(request, response)
-
     @with_fake_request
     def test_replaces_esi_tags_with_actual_response(self, request):
         rand = random.randint(100, 200)
