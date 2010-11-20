@@ -51,7 +51,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         fudge.clear_calls()
 
-        middleware = self.class_under_test(resolver=resolver)
+        middleware = self.class_under_test()
         middleware.process_response(request, response)
 
     @with_fake_esi_request
@@ -62,7 +62,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         fudge.clear_calls()
 
         self.assertFalse(request._esi_was_invoked, msg='sanity check')
-        middleware = self.class_under_test(resolver=resolver)
+        middleware = self.class_under_test()
         middleware.process_response(request, response)
 
     @with_fake_request
@@ -83,7 +83,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         response.content = esi_tag
         fudge.clear_calls()
 
-        middleware = self.class_under_test(resolver=resolver)
+        middleware = self.class_under_test()
         result = middleware.process_response(request, response)
 
         self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
@@ -115,7 +115,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         fake_cache.expects('set').with_args(public_url, expected_cache_data)
 
         with fudge.patched_context(middleware, 'cache', fake_cache):
-            obj = self.class_under_test(resolver=resolver)
+            obj = self.class_under_test()
             result = obj.process_response(request, response)
 
             self.assertNotRegexpMatches(result.content, esi_tag, msg='sanity check')
@@ -140,7 +140,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
 
-        obj = self.class_under_test(resolver=resolver)
+        obj = self.class_under_test()
         result = obj.process_response(request, response)
 
     @with_fake_request
@@ -162,7 +162,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
 
-        obj = self.class_under_test(resolver=resolver)
+        obj = self.class_under_test()
         result = obj.process_response(request, response)
 
 class TestOfRequestMiddleware(TestCase):

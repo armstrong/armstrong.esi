@@ -1,4 +1,4 @@
-from django.core import urlresolvers
+from django.core.urlresolvers import resolve
 from django.core.cache import cache
 from django.http import HttpResponse
 import re
@@ -30,15 +30,12 @@ class RequestMiddleware(BaseEsiMiddleware):
         return HttpResponse(content=content)
 
 class ResponseMiddleware(BaseEsiMiddleware):
-    def __init__(self, resolver=urlresolvers):
-        self.resolver = resolver
-
     def process_response(self, request, response):
         if request._esi_was_invoked:
             urls = {}
             original_content = response.content
             for url in request._esi_was_invoked:
-                (view, args, kwargs) = self.resolver.resolve(url)
+                (view, args, kwargs) = resolve(url)
                 urls[url] = (view, args, kwargs)
             response.content = replace_esi_tags(request, response.content, urls)
             cache.set(request.get_full_path(), {
