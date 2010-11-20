@@ -40,15 +40,10 @@ class TestOfResponseEsiMiddleware(TestCase):
     @with_fake_request
     def test_replaces_esi_tags_with_actual_response(self, request):
         rand = random.randint(100, 200)
-        url = '/hello-with-random-%d/' % rand
+        url = '/hello/%d/' % rand
 
+        request.provides('get_full_path').returns('/')
         request.has_attr(_esi_was_invoked=[url, ])
-
-        view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(view)
-        view.has_attr(content=str(rand))
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(url).returns((view, (), {}))
 
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % url
