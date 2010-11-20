@@ -10,7 +10,7 @@ def replace_esi_tags(request, content, url_data):
     for url, (view, args, kwargs) in url_data.items():
         esi_tag = '<esi:include src="%s" />' % url
         client = http_client.Client(cookies=request.COOKIES)
-        replacement = http_client.get(url)
+        replacement = client.get(url)
         content = content.replace(esi_tag, replacement.content)
     return content
 
