@@ -6,7 +6,6 @@ import fudge
 def with_fake_request(func):
     def inner(self, *args, **kwargs):
         request = fudge.Fake(HttpRequest)
-        request.provides('get_full_path')
         request.has_attr(COOKIES={})
         result = func(self, request, *args, **kwargs)
 

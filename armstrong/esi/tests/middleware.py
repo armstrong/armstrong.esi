@@ -16,9 +16,9 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     @with_fake_request
     def test_adds_esi_token_to_request_object(self, request):
-
         self.assertFalse(hasattr(request, '_esi_was_invoked'), msg='sanity check')
 
+        request.provides('get_full_path').returns('/')
         middleware = self.class_under_test()
         middleware.process_request(request)
 
@@ -145,20 +145,15 @@ class TestOfRequestMiddleware(TestCase):
         foo = random.randint(1000, 2000)
 
         rand = random.randint(100, 200)
-        public_url = '/hello/%d/' % rand
-        url = '/hello-with-random-%d/' % rand
+        public_url = '/some-cached-page/%d/' % rand
+        url = '/hello/%d/' % rand
 
         request.has_attr(_esi_was_invoked=['url', ])
 
-        view = fudge.Fake(expect_call=True)
-        view.with_args(request).returns(view)
-        view.has_attr(content=str(rand))
-        resolver = fudge.Fake()
-        resolver.expects('resolve').with_args(url).returns((view, (), {"value": foo}))
-
+        from armstrong.esi.tests.esi_support.views import hello
         cached_data = {
             'content': '<esi:include src="%s" />' % url,
-            'urls': {url: (view, (), {})},
+            'urls': {url: (hello, (), {})},
         }
 
         request.expects('get_full_path').returns(public_url)
@@ -175,6 +170,7 @@ class TestOfRequestMiddleware(TestCase):
 
     @with_fake_request
     def test_returns_None_on_cache_miss(self, request):
+        request.provides('get_full_path').returns('/')
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('get').returns(None)
 
