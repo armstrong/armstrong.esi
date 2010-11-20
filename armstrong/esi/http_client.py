@@ -17,7 +17,6 @@ except ImportError:
     from StringIO import StringIO
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login
 from django.core.handlers.base import BaseHandler
 from django.core.handlers.wsgi import WSGIRequest
 from django.core.signals import got_request_exception
@@ -373,58 +372,6 @@ class Client(object):
             response = self._handle_redirects(response, **extra)
         return response
 
-    def login(self, **credentials):
-        """
-        Sets the Client to appear as if it has successfully logged into a site.
-
-        Returns True if login is possible; False if the provided credentials
-        are incorrect, or the user is inactive, or if the sessions framework is
-        not available.
-        """
-        user = authenticate(**credentials)
-        if user and user.is_active \
-                and 'django.contrib.sessions' in settings.INSTALLED_APPS:
-            engine = import_module(settings.SESSION_ENGINE)
-
-            # Create a fake request to store login details.
-            request = HttpRequest()
-            if self.session:
-                request.session = self.session
-            else:
-                request.session = engine.SessionStore()
-            login(request, user)
-
-            # Save the session values.
-            request.session.save()
-
-            # Set the cookie to represent the session.
-            session_cookie = settings.SESSION_COOKIE_NAME
-            self.cookies[session_cookie] = request.session.session_key
-            cookie_data = {
-                'max-age': None,
-                'path': '/',
-                'domain': settings.SESSION_COOKIE_DOMAIN,
-                'secure': settings.SESSION_COOKIE_SECURE or None,
-                'expires': None,
-            }
-            self.cookies[session_cookie].update(cookie_data)
-
-            return True
-        else:
-            return False
-
-    def logout(self):
-        """
-        Removes the authenticated user's cookies and session object.
-
-        Causes the authenticated user to be logged out.
-        """
-        session = import_module(settings.SESSION_ENGINE).SessionStore()
-        session_cookie = self.cookies.get(settings.SESSION_COOKIE_NAME)
-        if session_cookie:
-            session.delete(session_key=session_cookie.value)
-        self.cookies = SimpleCookie()
-
     def _handle_redirects(self, response, **extra):
         "Follows any redirects by requesting responses from the server using GET."
 
@@ -450,4 +397,3 @@ class Client(object):
             if response.redirect_chain[-1] in response.redirect_chain[0:-1]:
                 break
         return response
-
