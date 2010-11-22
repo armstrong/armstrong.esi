@@ -12,7 +12,6 @@ from ..middleware import EsiMiddleware
 from ..middleware import RequestMiddleware
 from ..middleware import ResponseMiddleware
 
-from .esi_support.views import hello
 
 class TestOfResponseEsiMiddleware(TestCase):
     class_under_test = ResponseMiddleware
