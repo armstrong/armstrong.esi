@@ -101,7 +101,7 @@ class TestOfRequestMiddleware(TestCase):
 
         cached_data = {
             'content': '<esi:include src="%s" />' % url,
-            'urls': {url: (hello, (), {})},
+            'urls': [url],
         }
 
         request.expects('get_full_path').returns(public_url)
