@@ -7,9 +7,13 @@ from . import http_client
 
 
 def replace_esi_tags(request, content, urls):
+    request_data = {
+        'cookies': request.COOKIES,
+        'HTTP_REFERER': request.build_absolute_uri(),
+    }
     for url in urls:
         esi_tag = '<esi:include src="%s" />' % url
-        client = http_client.Client(cookies=request.COOKIES)
+        client = http_client.Client(**request_data)
         replacement = client.get(url)
         content = content.replace(esi_tag, replacement.content)
     return content

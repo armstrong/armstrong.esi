@@ -21,6 +21,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         self.assertFalse(hasattr(request, '_esi_was_invoked'), msg='sanity check')
 
         request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
         middleware = self.class_under_test()
         middleware.process_request(request)
 
@@ -45,6 +46,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         url = '/hello/%d/' % rand
 
         request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
         request.has_attr(_esi_was_invoked=[url, ])
 
         response = fudge.Fake(HttpResponse)
@@ -65,6 +67,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         request.has_attr(_esi_was_invoked=[public_url, ])
         request.expects('get_full_path').returns(public_url)
+        request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
 
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % public_url
@@ -104,6 +107,7 @@ class TestOfRequestMiddleware(TestCase):
         }
 
         request.expects('get_full_path').returns(public_url)
+        request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
 
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('get').with_args(public_url).returns(cached_data)
@@ -118,6 +122,7 @@ class TestOfRequestMiddleware(TestCase):
     @with_fake_request
     def test_returns_None_on_cache_miss(self, request):
         request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
         fake_cache = fudge.Fake(middleware.cache)
         fake_cache.expects('get').returns(None)
 
