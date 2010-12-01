@@ -21,21 +21,21 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     @with_fake_request
     def test_adds_esi_token_to_request_object(self, request):
-        self.assertFalse(hasattr(request, '_esi_was_invoked'), msg='sanity check')
+        self.assertFalse(hasattr(request, '_esi_fragment_urls'), msg='sanity check')
 
         request.provides('get_full_path').returns('/')
         request.provides('build_absolute_uri').returns('http://example.com/')
         middleware = self.class_under_test()
         middleware.process_request(request)
 
-        self.assertTrue(hasattr(request, '_esi_was_invoked'))
+        self.assertTrue(hasattr(request, '_esi_fragment_urls'))
 
     def test_esi_token_is_false_by_default(self):
         request = HttpRequest()
 
         middleware = self.class_under_test()
         middleware.process_request(request)
-        self.assertFalse(request._esi_was_invoked)
+        self.assertFalse(request._esi_fragment_urls)
 
     @with_fake_esi_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
@@ -50,7 +50,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         request.provides('get_full_path').returns('/')
         request.provides('build_absolute_uri').returns('http://example.com/')
-        request.has_attr(_esi_was_invoked=[url, ])
+        request.has_attr(_esi_fragment_urls=[url, ])
 
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % url
@@ -68,7 +68,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
 
-        request.has_attr(_esi_was_invoked=[public_url, ])
+        request.has_attr(_esi_fragment_urls=[public_url, ])
         request.expects('get_full_path').returns(public_url)
         request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
 
@@ -95,7 +95,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         fragment_url = '/cookies/%d/' % number
         request_url = '/page-with-esi-tag/'
         response = HttpResponse('<esi:include src="%s" />' % fragment_url)
-        request.has_attr(_esi_was_invoked=[fragment_url])
+        request.has_attr(_esi_fragment_urls=[fragment_url])
         request.expects('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
@@ -132,7 +132,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         response['Last-Modified'] = http_date(main_response_time)
 
         request_url = '/page-with-esi-tags/'
-        request.has_attr(_esi_was_invoked=fragment_urls)
+        request.has_attr(_esi_fragment_urls=fragment_urls)
         request.expects('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
@@ -164,7 +164,7 @@ class TestOfResponseEsiMiddleware(TestCase):
             response['Vary'] = main_header
 
         request_url = '/page-with-esi-tags/'
-        request.has_attr(_esi_was_invoked=fragment_urls)
+        request.has_attr(_esi_fragment_urls=fragment_urls)
         request.expects('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
@@ -205,7 +205,7 @@ class TestOfRequestMiddleware(TestCase):
         public_url = '/some-cached-page/%d/' % rand
         url = '/hello/%d/' % rand
 
-        request.has_attr(_esi_was_invoked=['url', ])
+        request.has_attr(_esi_fragment_urls=['url', ])
 
         cached_data = {
             'content': '<esi:include src="%s" />' % url,

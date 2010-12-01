@@ -9,7 +9,7 @@ class EsiNode(template.Node):
 
     def render(self, context):
         url = reverse(self.view_name)
-        context['_esi_was_invoked'].append(url)
+        context['_esi_fragment_urls'].append(url)
         return '<esi:include src="%s" />' % url
 
 @register.tag

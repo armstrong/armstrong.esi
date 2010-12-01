@@ -21,7 +21,7 @@ def with_fake_esi_request(func):
     '''
     @with_fake_request
     def inner(self, request, *args, **kwargs):
-        request.has_attr(_esi_was_invoked=[])
+        request.has_attr(_esi_fragment_urls=[])
         fudge.clear_calls()
         return func(self, request, *args, **kwargs)
     return inner

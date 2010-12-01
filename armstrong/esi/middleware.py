@@ -34,7 +34,7 @@ def replace_esi_tags(request, response, urls):
 
 class BaseEsiMiddleware(object):
     def process_request(self, request):
-        request._esi_was_invoked = []
+        request._esi_fragment_urls = []
 
 class RequestMiddleware(BaseEsiMiddleware):
     def process_request(self, request):
@@ -50,12 +50,12 @@ class RequestMiddleware(BaseEsiMiddleware):
 
 class ResponseMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
-        if request._esi_was_invoked:
+        if request._esi_fragment_urls:
             original_content = response.content
-            replace_esi_tags(request, response, request._esi_was_invoked)
+            replace_esi_tags(request, response, request._esi_fragment_urls)
             cache.set(request.get_full_path(), {
                 'content': original_content,
-                'urls': request._esi_was_invoked,
+                'urls': request._esi_fragment_urls,
             })
         return response
 

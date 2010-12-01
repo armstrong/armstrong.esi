@@ -11,17 +11,17 @@ from ...templatetags.esi import esi
 class TestOfEsiNode(TestCase):
     def test_renders_actual_code(self):
         node = EsiNode('hello_world')
-        result = node.render({'_esi_was_invoked': []})
+        result = node.render({'_esi_fragment_urls': []})
 
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
-    def test_sets_esi_was_invoked_to_true_on_context(self):
-        context = {'_esi_was_invoked': []}
+    def test_sets_esi_fragment_urls_to_true_on_context(self):
+        context = {'_esi_fragment_urls': []}
         node = EsiNode('hello_world')
         node.render(context)
 
-        self.assert_(len(context['_esi_was_invoked']) > 0)
+        self.assert_(len(context['_esi_fragment_urls']) > 0)
 
 class TestOfEsiHandler(TestCase):
     def test_extracts_view_out_of_templatetag_call(self):
@@ -47,7 +47,7 @@ class TestOfEsiHandler(TestCase):
         """
 
         t = template.Template(raw_template)
-        result = t.render(template.Context({'_esi_was_invoked': []})).strip()
+        result = t.render(template.Context({'_esi_fragment_urls': []})).strip()
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
