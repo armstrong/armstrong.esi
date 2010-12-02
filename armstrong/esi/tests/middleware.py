@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.utils.cache import cc_delim_re
 from django.utils.http import http_date
 import fudge
+import hashlib
 import random
 import re
 import urllib
@@ -11,13 +12,11 @@ from ._utils import TestCase
 from ._utils import with_fake_request, with_fake_esi_request
 
 from .. import middleware
-from ..middleware import EsiMiddleware
-from ..middleware import RequestMiddleware
-from ..middleware import ResponseMiddleware
+from ..middleware import IncludeEsiMiddleware
 
 
-class TestOfResponseEsiMiddleware(TestCase):
-    class_under_test = ResponseMiddleware
+class TestOfIncludeEsiMiddleware(TestCase):
+    class_under_test = IncludeEsiMiddleware
 
     @with_fake_request
     def test_adds_esi_token_to_request_object(self, request):
@@ -39,9 +38,11 @@ class TestOfResponseEsiMiddleware(TestCase):
 
     @with_fake_esi_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
-        response = random.randint(1000, 2000)
+        original_content = str(random.randint(1000, 2000))
+        response = HttpResponse(original_content)
         middleware = self.class_under_test()
-        self.assert_(response is middleware.process_response(request, response))
+        new_response = middleware.process_response(request, response)
+        self.assertEqual(original_content, new_response.content)
 
     @with_fake_request
     def test_replaces_esi_tags_with_actual_response(self, request):
@@ -64,31 +65,50 @@ class TestOfResponseEsiMiddleware(TestCase):
         self.assertEquals(result.content, str(rand))
 
     @with_fake_request
-    def test_stores_urls_and_original_content_in_cache(self, request):
+    def test_replaces_correctly_without_url_list(self, request):
+        rand = random.randint(100, 200)
+        url = '/hello/%d/' % rand
+
+        request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
+
+        response = fudge.Fake(HttpResponse)
+        esi_tag = '<esi:include src="%s" />' % url
+        response.content = esi_tag
+        fudge.clear_calls()
+
+        middleware = self.class_under_test()
+        result = middleware.process_response(request, response)
+
+        self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
+        self.assertEquals(result.content, str(rand))
+
+    @with_fake_request
+    def test_stores_urls_in_cache(self, request):
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
 
         request.has_attr(_esi_fragment_urls=[public_url, ])
-        request.expects('get_full_path').returns(public_url)
+        request.provides('get_full_path').returns(public_url)
         request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
 
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % public_url
         response.content = esi_tag
 
-        expected_cache_data = {
-            'content': response.content,
-            'urls': [public_url],
-        }
+        cache_key = 'armstrong.esi.%s' % hashlib.sha1(response.content).hexdigest()
+        expected_cache_data = [public_url]
+        expected_content = str(rand)
+
         fake_cache = fudge.Fake(middleware.cache)
-        fake_cache.expects('set').with_args(public_url, expected_cache_data)
+        fake_cache.expects('set').with_args(cache_key, expected_cache_data)
 
         with fudge.patched_context(middleware, 'cache', fake_cache):
             obj = self.class_under_test()
             result = obj.process_response(request, response)
 
             self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
-            self.assertEquals(result.content, str(rand), msg='sanity check')
+            self.assertEquals(result.content, expected_content, msg='sanity check')
 
     def get_cookie_test_objs(self, request):
         number = random.randint(100, 200)
@@ -96,7 +116,7 @@ class TestOfResponseEsiMiddleware(TestCase):
         request_url = '/page-with-esi-tag/'
         response = HttpResponse('<esi:include src="%s" />' % fragment_url)
         request.has_attr(_esi_fragment_urls=[fragment_url])
-        request.expects('get_full_path').returns(request_url)
+        request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
         return request, response, number
@@ -133,7 +153,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         request_url = '/page-with-esi-tags/'
         request.has_attr(_esi_fragment_urls=fragment_urls)
-        request.expects('get_full_path').returns(request_url)
+        request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
@@ -165,7 +185,7 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         request_url = '/page-with-esi-tags/'
         request.has_attr(_esi_fragment_urls=fragment_urls)
-        request.expects('get_full_path').returns(request_url)
+        request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
@@ -192,59 +212,3 @@ class TestOfResponseEsiMiddleware(TestCase):
 
         for headers in vary_sets:
             self.check_merged_vary_header(*headers)
-
-
-class TestOfRequestMiddleware(TestCase):
-    class_under_test = RequestMiddleware
-
-    @with_fake_request
-    def test_returns_assembled_HttpResponse_on_cache_hit(self, request):
-        foo = random.randint(1000, 2000)
-
-        rand = random.randint(100, 200)
-        public_url = '/some-cached-page/%d/' % rand
-        url = '/hello/%d/' % rand
-
-        request.has_attr(_esi_fragment_urls=['url', ])
-
-        cached_data = {
-            'content': '<esi:include src="%s" />' % url,
-            'urls': [url],
-        }
-
-        request.expects('get_full_path').returns(public_url)
-        request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
-
-        fake_cache = fudge.Fake(middleware.cache)
-        fake_cache.expects('get').with_args(public_url).returns(cached_data)
-
-        with fudge.patched_context(middleware, 'cache', fake_cache):
-            mw = self.class_under_test()
-            result = mw.process_request(request)
-
-            self.assert_(isinstance(result, HttpResponse))
-            self.assertEquals(result.content, str(rand))
-
-    @with_fake_request
-    def test_returns_None_on_cache_miss(self, request):
-        request.provides('get_full_path').returns('/')
-        request.provides('build_absolute_uri').returns('http://example.com/')
-        fake_cache = fudge.Fake(middleware.cache)
-        fake_cache.expects('get').returns(None)
-
-        with fudge.patched_context(middleware, 'cache', fake_cache):
-            mw = self.class_under_test()
-            self.assertEquals(None, mw.process_request(request))
-
-class TestOfEsiMiddleware(TestOfRequestMiddleware, TestOfResponseEsiMiddleware):
-    class_under_test = EsiMiddleware
-
-    def test_extends_RequestMiddleware(self):
-        mw = EsiMiddleware()
-        self.assert_(isinstance(mw, RequestMiddleware))
-
-    def test_extends_ResponseMiddleware(self):
-        mw = EsiMiddleware()
-        self.assert_(isinstance(mw, ResponseMiddleware))
-
-

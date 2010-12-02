@@ -1,15 +1,22 @@
+import hashlib
+import re
+
 from django.core.urlresolvers import resolve
 from django.core.cache import cache
 from django.http import HttpResponse
 from django.utils.datastructures import MultiValueDict
-import re
 
 from . import http_client
 from ._utils import merge_fragment_headers, merge_fragment_cookies, \
     HEADERS_TO_MERGE
 
 
+esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
+
 def replace_esi_tags(request, response, urls):
+    if not urls:
+        return
+
     fragment_headers = MultiValueDict()
     fragment_cookies = []
     request_data = {
@@ -36,29 +43,26 @@ class BaseEsiMiddleware(object):
     def process_request(self, request):
         request._esi_fragment_urls = []
 
-class RequestMiddleware(BaseEsiMiddleware):
-    def process_request(self, request):
-        super(RequestMiddleware, self).process_request(request)
-
-        data = cache.get(request.get_full_path())
-        if not data:
-            return None
-
-        response = HttpResponse(content=data['content'])
-        replace_esi_tags(request, response, data['urls'])
-        return response
-
-class ResponseMiddleware(BaseEsiMiddleware):
+class IncludeEsiMiddleware(BaseEsiMiddleware):
     def process_response(self, request, response):
-        if request._esi_fragment_urls:
-            original_content = response.content
-            replace_esi_tags(request, response, request._esi_fragment_urls)
-            cache.set(request.get_full_path(), {
-                'content': original_content,
-                'urls': request._esi_fragment_urls,
-            })
+        content_hash = hashlib.sha1(response.content).hexdigest()
+        cache_key = 'armstrong.esi.%s' % content_hash
+
+        urls = getattr(request, '_esi_fragment_urls', None)
+        if urls:
+            cache.set(cache_key, urls)
+        else:
+            # TODO: All pages without ESI tags will still require a cache
+            # lookup and searching the content for ESI tags. Avoiding this
+            # with a header that indicates the presence or lack of ESI tags
+            # when we're certain in advance could be useful.
+            urls = cache.get(cache_key)
+            if urls is None:
+                # Parsing HTML with regular expressions is Wrong, but it will
+                # suffice for finding the ESI tags placed by our templatetag.
+                matches = esi_tag_re.finditer(response.content)
+                urls = [match.group('url') for match in matches]
+                cache.set(cache_key, urls)
+
+        replace_esi_tags(request, response, urls)
         return response
-
-class EsiMiddleware(RequestMiddleware, ResponseMiddleware):
-    pass
-
