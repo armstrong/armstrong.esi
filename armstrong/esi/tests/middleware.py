@@ -9,7 +9,7 @@ import re
 import urllib
 
 from ._utils import TestCase
-from ._utils import with_fake_request, with_fake_esi_request
+from ._utils import with_fake_request
 
 from .. import middleware
 from ..middleware import IncludeEsiMiddleware
@@ -19,24 +19,6 @@ class TestOfIncludeEsiMiddleware(TestCase):
     class_under_test = IncludeEsiMiddleware
 
     @with_fake_request
-    def test_adds_esi_token_to_request_object(self, request):
-        self.assertFalse(hasattr(request, '_esi_fragment_urls'), msg='sanity check')
-
-        request.provides('get_full_path').returns('/')
-        request.provides('build_absolute_uri').returns('http://example.com/')
-        middleware = self.class_under_test()
-        middleware.process_request(request)
-
-        self.assertTrue(hasattr(request, '_esi_fragment_urls'))
-
-    def test_esi_token_is_false_by_default(self):
-        request = HttpRequest()
-
-        middleware = self.class_under_test()
-        middleware.process_request(request)
-        self.assertFalse(request._esi_fragment_urls)
-
-    @with_fake_esi_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
         original_content = str(random.randint(1000, 2000))
         response = HttpResponse(original_content)
@@ -51,7 +33,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
 
         request.provides('get_full_path').returns('/')
         request.provides('build_absolute_uri').returns('http://example.com/')
-        request.has_attr(_esi_fragment_urls=[url, ])
+        request.has_attr(_esi={'used': True})
 
         response = fudge.Fake(HttpResponse)
         esi_tag = '<esi:include src="%s" />' % url
@@ -84,11 +66,11 @@ class TestOfIncludeEsiMiddleware(TestCase):
         self.assertEquals(result.content, str(rand))
 
     @with_fake_request
-    def test_stores_urls_in_cache(self, request):
+    def test_stores_esi_info_in_cache(self, request):
         rand = random.randint(100, 200)
         public_url = '/hello/%d/' % rand
 
-        request.has_attr(_esi_fragment_urls=[public_url, ])
+        request.has_attr(_esi={'used': True})
         request.provides('get_full_path').returns(public_url)
         request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
 
@@ -97,7 +79,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         response.content = esi_tag
 
         cache_key = 'armstrong.esi.%s' % hashlib.sha1(response.content).hexdigest()
-        expected_cache_data = [public_url]
+        expected_cache_data = {'used': True}
         expected_content = str(rand)
 
         fake_cache = fudge.Fake(middleware.cache)
@@ -115,13 +97,13 @@ class TestOfIncludeEsiMiddleware(TestCase):
         fragment_url = '/cookies/%d/' % number
         request_url = '/page-with-esi-tag/'
         response = HttpResponse('<esi:include src="%s" />' % fragment_url)
-        request.has_attr(_esi_fragment_urls=[fragment_url])
+        request.has_attr(_esi={'used': True})
         request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
         return request, response, number
 
-    @with_fake_esi_request
+    @with_fake_request
     def test_merges_cookies(self, request):
         request, response, number = self.get_cookie_test_objs(request)
         middleware = self.class_under_test()
@@ -132,7 +114,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         self.assertEqual(result.cookies['number'].value, str(number))
         self.assertEqual(result.cookies['b']['path'], '/cookies/')
 
-    @with_fake_esi_request
+    @with_fake_request
     def test_main_response_cookies_take_precedence(self, request):
         request, response, number = self.get_cookie_test_objs(request)
         response.set_cookie('a', 'alligator')
@@ -141,7 +123,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
 
         self.assertEqual(result.cookies['a'].value, 'alligator')
 
-    @with_fake_esi_request
+    @with_fake_request
     def check_if_max_time_is_last_modified(self, request, main_response_time,
       fragment_time_1, fragment_time_2, max_time):
         fragment_urls = ['/last-modified/%s/' % num for num in
@@ -152,7 +134,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         response['Last-Modified'] = http_date(main_response_time)
 
         request_url = '/page-with-esi-tags/'
-        request.has_attr(_esi_fragment_urls=fragment_urls)
+        request.has_attr(_esi={'used': True})
         request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
@@ -172,7 +154,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         self.check_if_max_time_is_last_modified(time_b, time_c, time_a, max_time)
         self.check_if_max_time_is_last_modified(time_c, time_a, time_b, max_time)
 
-    @with_fake_esi_request
+    @with_fake_request
     def check_merged_vary_header(self, request, main_header, fragment_header_1,
       fragment_header_2):
         fragment_urls = ['/vary/?headers=%s' % urllib.quote_plus(vary) for vary in
@@ -184,7 +166,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
             response['Vary'] = main_header
 
         request_url = '/page-with-esi-tags/'
-        request.has_attr(_esi_fragment_urls=fragment_urls)
+        request.has_attr(_esi={'used': True})
         request.provides('get_full_path').returns(request_url)
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)

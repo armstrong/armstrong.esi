@@ -14,18 +14,6 @@ def with_fake_request(func):
         return result
     return inner
 
-def with_fake_esi_request(func):
-    '''
-    Passes along a fake request that looks like it has already gone through
-    the RequestMiddleware.
-    '''
-    @with_fake_request
-    def inner(self, request, *args, **kwargs):
-        request.has_attr(_esi_fragment_urls=[])
-        fudge.clear_calls()
-        return func(self, request, *args, **kwargs)
-    return inner
-
 class TestCase(DjangoTestCase):
     def setUp(self):
         self._original_settings = settings

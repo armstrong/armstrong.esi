@@ -1,4 +1,5 @@
 from email.utils import parsedate
+import re
 import time
 
 from django.utils.cache import cc_delim_re
@@ -7,6 +8,8 @@ from django.utils.http import http_date
 
 from . import http_client
 
+
+esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 def reduce_vary_headers(response, additional):
     '''Merges the Vary header values so all headers are included.'''
@@ -74,10 +77,7 @@ def merge_fragment_cookies(response, fragment_cookies):
             dict.__setitem__(cookies, key, morsel)
     response.cookies = cookies
 
-def replace_esi_tags(request, response, urls):
-    if not urls:
-        return
-
+def replace_esi_tags(request, response):
     fragment_headers = MultiValueDict()
     fragment_cookies = []
     request_data = {
@@ -85,11 +85,16 @@ def replace_esi_tags(request, response, urls):
         'HTTP_REFERER': request.build_absolute_uri(),
     }
 
-    for url in urls:
-        esi_tag = '<esi:include src="%s" />' % url
+    replacement_offset = 0
+    for match in esi_tag_re.finditer(response.content):
         client = http_client.Client(**request_data)
-        fragment = client.get(url)
-        response.content = response.content.replace(esi_tag, fragment.content)
+        fragment = client.get(match.group('url'))
+
+        start = match.start() + replacement_offset
+        end = match.end() + replacement_offset
+        response.content = '%s%s%s' % (response.content[:start],
+            fragment.content, response.content[end:])
+        replacement_offset += len(fragment.content) - len(match.group(0))
 
         for header in HEADERS_TO_MERGE:
             if header in fragment:

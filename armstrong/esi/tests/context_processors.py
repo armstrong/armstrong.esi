@@ -10,9 +10,11 @@ from ..context_processors import esi
 class TestOfEsiContextProcessor(TestCase):
     @with_fake_request
     def test_adds_esi_token_to_context(self, request):
-        expected_value = random.randint(1000, 2000)
-        request._esi_fragment_urls = expected_value
-
         result = esi(request)
-        self.assert_('_esi_fragment_urls' in result, msg='sanity check')
-        self.assertEquals(result['_esi_fragment_urls'], expected_value)
+        self.assert_('_esi' in result, msg='sanity check')
+        self.assertFalse(result['_esi']['used'])
+
+        request._esi['used'] = True
+        result = esi(request)
+        self.assert_('_esi' in result, msg='sanity check')
+        self.assert_(result['_esi']['used'])
