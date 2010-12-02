@@ -5,7 +5,7 @@ from django.core.urlresolvers import resolve
 from django.core.cache import cache
 from django.http import HttpResponse
 
-from ._utils import merge_fragment_headers, merge_fragment_cookies, \
+from .utils import merge_fragment_headers, merge_fragment_cookies, \
     replace_esi_tags
 
 
