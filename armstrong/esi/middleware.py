@@ -4,40 +4,12 @@ import re
 from django.core.urlresolvers import resolve
 from django.core.cache import cache
 from django.http import HttpResponse
-from django.utils.datastructures import MultiValueDict
 
-from . import http_client
 from ._utils import merge_fragment_headers, merge_fragment_cookies, \
-    HEADERS_TO_MERGE
+    replace_esi_tags
 
 
 esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
-
-def replace_esi_tags(request, response, urls):
-    if not urls:
-        return
-
-    fragment_headers = MultiValueDict()
-    fragment_cookies = []
-    request_data = {
-        'cookies': request.COOKIES,
-        'HTTP_REFERER': request.build_absolute_uri(),
-    }
-
-    for url in urls:
-        esi_tag = '<esi:include src="%s" />' % url
-        client = http_client.Client(**request_data)
-        fragment = client.get(url)
-        response.content = response.content.replace(esi_tag, fragment.content)
-
-        for header in HEADERS_TO_MERGE:
-            if header in fragment:
-                fragment_headers.appendlist(header, fragment[header])
-        if fragment.cookies:
-            fragment_cookies.append(fragment.cookies)
-
-    merge_fragment_headers(response, fragment_headers)
-    merge_fragment_cookies(response, fragment_cookies)
 
 class BaseEsiMiddleware(object):
     def process_request(self, request):
