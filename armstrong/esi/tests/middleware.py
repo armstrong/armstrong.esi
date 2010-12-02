@@ -12,18 +12,20 @@ from ._utils import TestCase
 from ._utils import with_fake_request
 
 from .. import middleware
-from ..middleware import IncludeEsiMiddleware
+from ..middleware import IncludeEsiMiddleware, StoreEsiStatusMiddleware
 
 
-class TestOfIncludeEsiMiddleware(TestCase):
-    class_under_test = IncludeEsiMiddleware
+def full_process_response(request, response):
+    response = StoreEsiStatusMiddleware().process_response(request, response)
+    response = IncludeEsiMiddleware().process_response(request, response)
+    return response
 
+class TestMiddleware(TestCase):
     @with_fake_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
         original_content = str(random.randint(1000, 2000))
         response = HttpResponse(original_content)
-        middleware = self.class_under_test()
-        new_response = middleware.process_response(request, response)
+        new_response = full_process_response(request, response)
         self.assertEqual(original_content, new_response.content)
 
     @with_fake_request
@@ -40,57 +42,9 @@ class TestOfIncludeEsiMiddleware(TestCase):
         response.content = esi_tag
         fudge.clear_calls()
 
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
-
+        result = full_process_response(request, response)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
-
-    @with_fake_request
-    def test_replaces_correctly_without_url_list(self, request):
-        rand = random.randint(100, 200)
-        url = '/hello/%d/' % rand
-
-        request.provides('get_full_path').returns('/')
-        request.provides('build_absolute_uri').returns('http://example.com/')
-
-        response = fudge.Fake(HttpResponse)
-        esi_tag = '<esi:include src="%s" />' % url
-        response.content = esi_tag
-        fudge.clear_calls()
-
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
-
-        self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
-        self.assertEquals(result.content, str(rand))
-
-    @with_fake_request
-    def test_stores_esi_info_in_cache(self, request):
-        rand = random.randint(100, 200)
-        public_url = '/hello/%d/' % rand
-
-        request.has_attr(_esi={'used': True})
-        request.provides('get_full_path').returns(public_url)
-        request.provides('build_absolute_uri').returns('http://example.com%s' % public_url)
-
-        response = fudge.Fake(HttpResponse)
-        esi_tag = '<esi:include src="%s" />' % public_url
-        response.content = esi_tag
-
-        cache_key = 'armstrong.esi.%s' % hashlib.sha1(response.content).hexdigest()
-        expected_cache_data = {'used': True}
-        expected_content = str(rand)
-
-        fake_cache = fudge.Fake(middleware.cache)
-        fake_cache.expects('set').with_args(cache_key, expected_cache_data)
-
-        with fudge.patched_context(middleware, 'cache', fake_cache):
-            obj = self.class_under_test()
-            result = obj.process_response(request, response)
-
-            self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
-            self.assertEquals(result.content, expected_content, msg='sanity check')
 
     def get_cookie_test_objs(self, request):
         number = random.randint(100, 200)
@@ -106,8 +60,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
     @with_fake_request
     def test_merges_cookies(self, request):
         request, response, number = self.get_cookie_test_objs(request)
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
+        result = full_process_response(request, response)
 
         self.assertEqual(result.cookies['a'].value, 'apple')
         self.assertEqual(result.cookies['b'].value, 'banana')
@@ -118,8 +71,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
     def test_main_response_cookies_take_precedence(self, request):
         request, response, number = self.get_cookie_test_objs(request)
         response.set_cookie('a', 'alligator')
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
+        result = full_process_response(request, response)
 
         self.assertEqual(result.cookies['a'].value, 'alligator')
 
@@ -139,9 +91,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
-
+        result = response = full_process_response(request, response)
         self.assertTrue(response['Last-Modified'], max_time)
 
     def test_merges_last_modified(self):
@@ -171,8 +121,7 @@ class TestOfIncludeEsiMiddleware(TestCase):
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
-        middleware = self.class_under_test()
-        result = middleware.process_response(request, response)
+        result = full_process_response(request, response)
         vary_result = result.get('Vary', '')
 
         for header in (main_header, fragment_header_1, fragment_header_2):
