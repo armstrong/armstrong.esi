@@ -4,6 +4,8 @@ from django.utils.cache import cc_delim_re
 from django.utils.http import http_date
 import fudge
 import hashlib
+import itertools
+import math
 import random
 import re
 import urllib
@@ -45,6 +47,38 @@ class TestMiddleware(TestCase):
         result = full_process_response(request, response)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
+
+    @with_fake_request
+    def check_content_permutation(self, request, permutation, chunk_results):
+        request_url = '/page-with-esi-tags/'
+        request.has_attr(_esi={'used': True})
+        request.provides('get_full_path').returns(request_url)
+        request.provides('build_absolute_uri').returns(
+            'http://example.com%s' % request_url)
+
+        response = HttpResponse(''.join(permutation))
+        expected_result = ''.join(chunk_results[chunk] for chunk in permutation)
+        result = full_process_response(request, response)
+        self.assertEqual(result.content, expected_result)
+
+    def test_replaces_multiple_esi_tags_correctly(self):
+        static_text_options = (
+            '',  # Allow ESI tags to end up next to each other
+            'abcdefg',
+            'abcdefghijklmnopqrstuvwxyz' * 10,
+        )
+        main_page_chunks = dict(zip(static_text_options, static_text_options))
+
+        # Make sure some of the includes generate content longer than the ESI
+        # tag itself and some shorter.
+        number_lengths = (1, 10, 50, 100)
+        for length in number_lengths:
+            num = random.randint(math.pow(10, length-1), math.pow(10, length) - 1)
+            content = '<esi:include src="/hello/%s/" />' % num
+            main_page_chunks[content] = str(num)
+
+        for permutation in itertools.permutations(main_page_chunks, 4):
+            self.check_content_permutation(permutation, main_page_chunks)
 
     def get_cookie_test_objs(self, request):
         number = random.randint(100, 200)
@@ -91,7 +125,7 @@ class TestMiddleware(TestCase):
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
-        result = response = full_process_response(request, response)
+        response = full_process_response(request, response)
         self.assertTrue(response['Last-Modified'], max_time)
 
     def test_merges_last_modified(self):
