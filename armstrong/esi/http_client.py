@@ -60,26 +60,19 @@ class LocalHandler(BaseHandler):
     """
     def __call__(self, environ):
         from django.conf import settings
-        from django.core import signals
 
         # Set up middleware if needed. We couldn't do this earlier, because
         # settings weren't available.
         if self._request_middleware is None:
             self.load_middleware()
 
-        signals.request_started.send(sender=self.__class__)
-        try:
-            request = WSGIRequest(environ)
-            response = self.get_response(request)
+        request = WSGIRequest(environ)
+        response = self.get_response(request)
 
-            # Apply response middleware.
-            for middleware_method in self._response_middleware:
-                response = middleware_method(request, response)
-            response = self.apply_response_fixes(request, response)
-        finally:
-            signals.request_finished.disconnect(close_connection)
-            signals.request_finished.send(sender=self.__class__)
-            signals.request_finished.connect(close_connection)
+        # Apply response middleware.
+        for middleware_method in self._response_middleware:
+            response = middleware_method(request, response)
+        response = self.apply_response_fixes(request, response)
 
         return response
 
