@@ -1,5 +1,6 @@
 from django import template
 from django.core.urlresolvers import reverse
+from django.template import Token, Parser, TOKEN_BLOCK
 import fudge
 import random
 
@@ -15,18 +16,30 @@ def create_context():
     context.update(context_processors.esi(request))
     return context
 
+def create_token(content):
+    return Token(TOKEN_BLOCK, content)
+
 class TestOfEsiNode(TestCase):
     def test_renders_actual_code(self):
         context = create_context()
-        node = EsiNode('hello_world')
+        node = esi(Parser([]), create_token('esi hello_world'))
         result = node.render(context)
 
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
+    def test_renders_kwargs(self):
+        context = create_context()
+        number = random.randint(100, 200)
+        node = esi(Parser([]), create_token('esi hello_number number=%s' % number))
+        result = node.render(context)
+
+        expected_url = reverse('hello_number', kwargs={'number': number})
+        self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
+
     def test_sets_esi_used_to_true_on_context(self):
         context = create_context()
-        node = EsiNode('hello_world')
+        node = EsiNode('hello_world', [], {}, None)
         node.render(context)
 
         self.assertTrue(context['_esi']['used'])
