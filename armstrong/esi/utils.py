@@ -83,6 +83,7 @@ def replace_esi_tags(request, response):
     request_data = {
         'cookies': request.COOKIES,
         'HTTP_REFERER': request.build_absolute_uri(),
+        'HTTP_X_ESI_FRAGMENT': True,
     }
 
     replacement_offset = 0
