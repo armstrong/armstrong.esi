@@ -61,6 +61,8 @@ class TestMiddleware(TestCase):
         result = full_process_response(request, response)
         self.assertEqual(result.content, expected_result)
 
+    # TODO: This is a slow test that should be adjusted for so it doesn't take up
+    #       > 80% of the execution time.
     def test_replaces_multiple_esi_tags_correctly(self):
         static_text_options = (
             '',  # Allow ESI tags to end up next to each other

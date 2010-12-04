@@ -77,6 +77,9 @@ def merge_fragment_cookies(response, fragment_cookies):
             dict.__setitem__(cookies, key, morsel)
     response.cookies = cookies
 
+# TODO: Test this independently of the middleware
+# TODO: Reduce the lines of codes and varying functionality of this code so its
+#       tests can be reduced in complexity.
 def replace_esi_tags(request, response):
     fragment_headers = MultiValueDict()
     fragment_cookies = []
