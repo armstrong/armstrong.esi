@@ -1,27 +1,48 @@
 from django import template
 from django.core.urlresolvers import reverse
+from django.template import Token, Parser, TOKEN_BLOCK
 import fudge
 import random
 
 from .._utils import TestCase
 
+from ... import context_processors
 from ...templatetags.esi import EsiNode
 from ...templatetags.esi import esi
 
+def create_context():
+    request = fudge.Fake()
+    context = template.Context()
+    context.update(context_processors.esi(request))
+    return context
+
+def create_token(content):
+    return Token(TOKEN_BLOCK, content)
+
 class TestOfEsiNode(TestCase):
     def test_renders_actual_code(self):
-        node = EsiNode('hello_world')
-        result = node.render({'_esi_was_invoked': []})
+        context = create_context()
+        node = esi(Parser([]), create_token('esi hello_world'))
+        result = node.render(context)
 
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
-    def test_sets_esi_was_invoked_to_true_on_context(self):
-        context = {'_esi_was_invoked': []}
-        node = EsiNode('hello_world')
+    def test_renders_kwargs(self):
+        context = create_context()
+        number = random.randint(100, 200)
+        node = esi(Parser([]), create_token('esi hello_number number=%s' % number))
+        result = node.render(context)
+
+        expected_url = reverse('hello_number', kwargs={'number': number})
+        self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
+
+    def test_sets_esi_used_to_true_on_context(self):
+        context = create_context()
+        node = EsiNode('hello_world', [], {}, None)
         node.render(context)
 
-        self.assert_(len(context['_esi_was_invoked']) > 0)
+        self.assertTrue(context['_esi']['used'])
 
 class TestOfEsiHandler(TestCase):
     def test_extracts_view_out_of_templatetag_call(self):
@@ -47,7 +68,8 @@ class TestOfEsiHandler(TestCase):
         """
 
         t = template.Template(raw_template)
-        result = t.render(template.Context({'_esi_was_invoked': []})).strip()
+        context = create_context()
+        result = t.render(context).strip()
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 

@@ -1,4 +1,4 @@
-
-# TODO: Double check that this'll work as expected inside a full example environment
 def esi(request):
-    return {'_esi_was_invoked': request._esi_was_invoked}
+    if getattr(request, '_esi', None) is None:
+        request._esi = {'used': False}
+    return {'_esi': request._esi}

@@ -1,47 +1,25 @@
-from django.core import urlresolvers
-from django.core.cache import cache
-from django.http import HttpResponse
+import hashlib
 import re
 
-class BaseEsiMiddleware(object):
-    def process_request(self, request):
-        request._esi_was_invoked = []
+from django.core.urlresolvers import resolve
+from django.core.cache import cache
+from django.http import HttpResponse
 
-class RequestMiddleware(BaseEsiMiddleware):
-    def process_request(self, request):
-        super(RequestMiddleware, self).process_request(request)
+from .utils import merge_fragment_headers, merge_fragment_cookies, \
+    replace_esi_tags
 
-        data = cache.get(request.get_full_path())
-        if not data:
-            return None
 
-        for url, (view, args, kwargs) in data['urls'].items():
-            esi_tag = '<esi:include src="%s" />' % url
-            replacement = view(request, *args, **kwargs)
-            data['content'] = data['content'].replace(esi_tag, replacement.content)
+esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
-        return HttpResponse(content=data['content'])
-
-class ResponseMiddleware(BaseEsiMiddleware):
-    def __init__(self, resolver=urlresolvers):
-        self.resolver = resolver
-
+class IncludeEsiMiddleware(object):
     def process_response(self, request, response):
-        if request._esi_was_invoked:
-            urls = {}
-            original_content = response.content
-            for url in request._esi_was_invoked:
-                (view, args, kwargs) = self.resolver.resolve(url)
-                urls[url] = (view, args, kwargs)
-                new_content = view(request, *args, **kwargs)
-                esi_tag = '<esi:include src="%s" />' % url
-                response.content = response.content.replace(esi_tag, new_content.content)
-            cache.set(request.get_full_path(), {
-                'content': original_content,
-                'urls': urls,
-            })
+        esi_status = getattr(response, '_esi', {'used': False})
+        if esi_status['used']:
+            replace_esi_tags(request, response)
         return response
 
-class EsiMiddleware(RequestMiddleware, ResponseMiddleware):
-    pass
-
+class StoreEsiStatusMiddleware(object):
+    def process_response(self, request, response):
+        if hasattr(request, '_esi'):
+            response._esi = request._esi
+        return response
