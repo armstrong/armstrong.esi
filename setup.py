@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='armstrong.esi',
-    version='0.1',
+    version='0.1.1',
     description='Base functionality that needs to be shared widely',
     author='Texas Tribune',
     author_email='tech@texastribune.org',
@@ -10,6 +10,7 @@ setup(
     packages=[
         'armstrong',
         'armstrong.esi',
+        'armstrong.esi.templatetags',
     ],
 
     install_requires=[
