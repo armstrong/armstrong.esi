@@ -10,17 +10,22 @@ class EsiTemplateTagError(Exception):
     pass
 
 class EsiNode(URLNode):
+    def __init__(self, *args, **kwargs):
+        super(EsiNode, self).__init__(*args, **kwargs)
+        if '/' in self.view_name:
+            # An actual URL has been passed instead of a view name.
+            self.raw_url = self.view_name
+            self.view_name = None
+        else:
+            self.raw_url = None
+
     def render(self, context):
         try:
             context['_esi']['used'] = True
         except KeyError:
             raise EsiTemplateTagError('The esi templatetag requires the esi context processor, but it isn\'t present.')
 
-        if '/' in self.view_name:
-            # An actual URL has been passed instead of a view name, so use it.
-            url = self.view_name
-        else:
-            url = super(EsiNode, self).render(context)
+        url = self.raw_url or super(EsiNode, self).render(context)
 
         if self.asvar:
             url = context[self.asvar]
