@@ -9,8 +9,17 @@ from django.utils.http import http_date
 
 from . import http_client
 
+try:
+    from logging import NullHandler
+except ImportError:
+    # Compatibility mode for 2.6.x
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
 
 log = logging.getLogger('armstrong.esi')
+log.addHandler(NullHandler())
 esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 def reduce_vary_headers(response, additional):
