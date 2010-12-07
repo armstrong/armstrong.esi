@@ -1,14 +1,12 @@
 from cStringIO import StringIO
 from email.utils import parsedate
-<<<<<<< HEAD
 import gzip
-=======
 import logging
->>>>>>> master
 import re
 import time
 from urlparse import urljoin
 
+from django.middleware.gzip import GZipMiddleware
 from django.utils.cache import cc_delim_re
 from django.utils.datastructures import MultiValueDict
 from django.utils.http import http_date
@@ -94,17 +92,18 @@ def merge_fragment_cookies(response, fragment_cookies):
             dict.__setitem__(cookies, key, morsel)
     response.cookies = cookies
 
-def uncompress_response_content(response):
+def gunzip_response_content(response):
     '''
-    If the response has already been compressed, uncompress it so we can modify
+    If the response has already been compressed, gunzip it so we can modify
     the text.
     '''
-    if response.get('Content-Encoding', None) == 'gzip':
-        f = gzip.GzipFile(fileobj=StringIO(response.content))
-        response.content = f.read()
-        f.close()
-        del response['Content-Encoding']
-    return response
+    f = gzip.GzipFile(fileobj=StringIO(response.content))
+    response.content = f.read()
+    f.close()
+    del response['Content-Encoding']
+
+def gzip_response_content(request, response):
+    GZipMiddleware().process_response(request, response)
 
 def build_full_fragment_url(request, url):
     if url.startswith('/'):
@@ -124,7 +123,6 @@ def replace_esi_tags(request, response):
         'HTTP_X_ESI_FRAGMENT': True,
     }
 
-    uncompress_response_content(response)
     replacement_offset = 0
     for match in esi_tag_re.finditer(response.content):
         url = build_full_fragment_url(request, match.group('url'))

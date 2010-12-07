@@ -25,3 +25,6 @@ def vary(request):
     response = HttpResponse(request.GET['headers'])
     patch_vary_headers(response, cc_delim_re.split(request.GET['headers']))
     return response
+
+def text(request):
+    return HttpResponse('a' * 500)

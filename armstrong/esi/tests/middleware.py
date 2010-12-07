@@ -16,6 +16,7 @@ from ._utils import with_fake_request
 
 from .. import middleware
 from ..middleware import IncludeEsiMiddleware, StoreEsiStatusMiddleware
+from ..utils import gunzip_response_content
 
 
 def full_process_response(request, response, gzip=False):
@@ -34,7 +35,7 @@ class TestMiddleware(TestCase):
         self.assertEqual(original_content, new_response.content)
 
     @with_fake_request
-    def test_replaces_esi_tags_with_actual_response(self, request, gzip=False):
+    def test_replaces_esi_tags_with_actual_response(self, request):
         rand = random.randint(100, 200)
         url = '/hello/%d/' % rand
 
@@ -45,14 +46,28 @@ class TestMiddleware(TestCase):
         response = HttpResponse()
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
-        fudge.clear_calls()
 
-        result = full_process_response(request, response, gzip=gzip)
+        result = full_process_response(request, response)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
 
-    def test_replaces_esi_tags_in_gzipped_response(self):
-        self.test_replaces_esi_tags_with_actual_response(gzip=True)
+    @with_fake_request
+    def test_replaces_esi_tags_in_gzipped_response(self, request):
+        request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
+        request.has_attr(_esi={'used': True})
+        request.has_attr(META={'HTTP_ACCEPT_ENCODING': 'gzip'})
+
+        response = HttpResponse()
+        esi_tag = '<esi:include src="/500chars/" />'
+        response.content = '%s%s%s' % ('z' * 250, esi_tag, 'z' * 250)
+
+        result = full_process_response(request, response, gzip=True)
+        self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
+        self.assertTrue(result.get('Content-Encoding', None) == 'gzip')
+
+        gunzip_response_content(result)
+        self.assertTrue(re.search('a' * 500, result.content))
 
     @with_fake_request
     def test_replaces_relative_url_esi(self, request):
@@ -63,7 +78,7 @@ class TestMiddleware(TestCase):
         request.provides('build_absolute_uri').returns('http://example.com/')
         request.has_attr(_esi={'used': True})
 
-        response = fudge.Fake(HttpResponse)
+        response = HttpResponse()
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
         fudge.clear_calls()
