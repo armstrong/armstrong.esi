@@ -1,4 +1,5 @@
 from email.utils import parsedate
+import logging
 import re
 import time
 
@@ -9,6 +10,7 @@ from django.utils.http import http_date
 from . import http_client
 
 
+log = logging.getLogger('armstrong.esi')
 esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 def reduce_vary_headers(response, additional):
@@ -91,8 +93,19 @@ def replace_esi_tags(request, response):
 
     replacement_offset = 0
     for match in esi_tag_re.finditer(response.content):
+        url = match.group('url')
         client = http_client.Client(**request_data)
-        fragment = client.get(match.group('url'))
+        fragment = client.get(url)
+
+        if fragment.status_code != 200:
+            extra = {'data': {
+                'fragment': fragment.__dict__,
+                'request': request.__dict__,
+            }}
+            log.error('ESI fragment %s returned status code %s' %
+                (url, fragment.status_code), extra=extra)
+            # Remove the error content so it isn't added to the page.
+            fragment.content = ''
 
         start = match.start() + replacement_offset
         end = match.end() + replacement_offset
