@@ -1,8 +1,13 @@
 from cStringIO import StringIO
 from email.utils import parsedate
+<<<<<<< HEAD
 import gzip
+=======
+import logging
+>>>>>>> master
 import re
 import time
+from urlparse import urljoin
 
 from django.utils.cache import cc_delim_re
 from django.utils.datastructures import MultiValueDict
@@ -10,7 +15,17 @@ from django.utils.http import http_date
 
 from . import http_client
 
+try:
+    from logging import NullHandler
+except ImportError:
+    # Compatibility mode for 2.6.x
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
 
+
+log = logging.getLogger('armstrong.esi')
+log.addHandler(NullHandler())
 esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 def reduce_vary_headers(response, additional):
@@ -91,6 +106,12 @@ def uncompress_response_content(response):
         del response['Content-Encoding']
     return response
 
+def build_full_fragment_url(request, url):
+    if url.startswith('/'):
+        return url
+    else:
+        return urljoin(request.path, url)
+
 # TODO: Test this independently of the middleware
 # TODO: Reduce the lines of codes and varying functionality of this code so its
 #       tests can be reduced in complexity.
@@ -106,8 +127,19 @@ def replace_esi_tags(request, response):
     uncompress_response_content(response)
     replacement_offset = 0
     for match in esi_tag_re.finditer(response.content):
+        url = build_full_fragment_url(request, match.group('url'))
         client = http_client.Client(**request_data)
-        fragment = client.get(match.group('url'))
+        fragment = client.get(url)
+
+        if fragment.status_code != 200:
+            extra = {'data': {
+                'fragment': fragment.__dict__,
+                'request': request.__dict__,
+            }}
+            log.error('ESI fragment %s returned status code %s' %
+                (url, fragment.status_code), extra=extra)
+            # Remove the error content so it isn't added to the page.
+            fragment.content = ''
 
         start = match.start() + replacement_offset
         end = match.end() + replacement_offset

@@ -55,6 +55,24 @@ class TestMiddleware(TestCase):
         self.test_replaces_esi_tags_with_actual_response(gzip=True)
 
     @with_fake_request
+    def test_replaces_relative_url_esi(self, request):
+        rand = random.randint(100, 200)
+        url = './%d/' % rand
+
+        request.has_attr(path='/hello/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
+        request.has_attr(_esi={'used': True})
+
+        response = fudge.Fake(HttpResponse)
+        esi_tag = '<esi:include src="%s" />' % url
+        response.content = esi_tag
+        fudge.clear_calls()
+
+        result = full_process_response(request, response)
+        self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
+        self.assertEquals(result.content, str(rand))
+
+    @with_fake_request
     def check_content_permutation(self, request, permutation, chunk_results):
         request_url = '/page-with-esi-tags/'
         request.has_attr(_esi={'used': True})
