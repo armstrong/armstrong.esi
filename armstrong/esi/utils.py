@@ -1,4 +1,6 @@
+from cStringIO import StringIO
 from email.utils import parsedate
+import gzip
 import re
 import time
 
@@ -77,6 +79,18 @@ def merge_fragment_cookies(response, fragment_cookies):
             dict.__setitem__(cookies, key, morsel)
     response.cookies = cookies
 
+def uncompress_response_content(response):
+    '''
+    If the response has already been compressed, uncompress it so we can modify
+    the text.
+    '''
+    if response.get('Content-Encoding', None) == 'gzip':
+        f = gzip.GzipFile(fileobj=StringIO(response.content))
+        response.content = f.read()
+        f.close()
+        del response['Content-Encoding']
+    return response
+
 # TODO: Test this independently of the middleware
 # TODO: Reduce the lines of codes and varying functionality of this code so its
 #       tests can be reduced in complexity.
@@ -89,6 +103,7 @@ def replace_esi_tags(request, response):
         'HTTP_X_ESI_FRAGMENT': True,
     }
 
+    uncompress_response_content(response)
     replacement_offset = 0
     for match in esi_tag_re.finditer(response.content):
         client = http_client.Client(**request_data)

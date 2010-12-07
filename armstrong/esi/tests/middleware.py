@@ -1,5 +1,6 @@
 from django.http import HttpRequest
 from django.http import HttpResponse
+from django.middleware.gzip import GZipMiddleware
 from django.utils.cache import cc_delim_re
 from django.utils.http import http_date
 import fudge
@@ -17,7 +18,9 @@ from .. import middleware
 from ..middleware import IncludeEsiMiddleware, StoreEsiStatusMiddleware
 
 
-def full_process_response(request, response):
+def full_process_response(request, response, gzip=False):
+    if gzip:
+        response = GZipMiddleware().process_response(request, response)
     response = StoreEsiStatusMiddleware().process_response(request, response)
     response = IncludeEsiMiddleware().process_response(request, response)
     return response
@@ -31,7 +34,7 @@ class TestMiddleware(TestCase):
         self.assertEqual(original_content, new_response.content)
 
     @with_fake_request
-    def test_replaces_esi_tags_with_actual_response(self, request):
+    def test_replaces_esi_tags_with_actual_response(self, request, gzip=False):
         rand = random.randint(100, 200)
         url = '/hello/%d/' % rand
 
@@ -39,14 +42,17 @@ class TestMiddleware(TestCase):
         request.provides('build_absolute_uri').returns('http://example.com/')
         request.has_attr(_esi={'used': True})
 
-        response = fudge.Fake(HttpResponse)
+        response = HttpResponse()
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
         fudge.clear_calls()
 
-        result = full_process_response(request, response)
+        result = full_process_response(request, response, gzip=gzip)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
+
+    def test_replaces_esi_tags_in_gzipped_response(self):
+        self.test_replaces_esi_tags_with_actual_response(gzip=True)
 
     @with_fake_request
     def check_content_permutation(self, request, permutation, chunk_results):
