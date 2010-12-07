@@ -28,6 +28,14 @@ class TestOfEsiNode(TestCase):
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
 
+    def test_renders_relative_esi(self):
+        context = create_context()
+        node = esi(Parser([]), create_token('esi ./blah/'))
+        result = node.render(context)
+
+        expected_url = './blah/'
+        self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
+
     def test_renders_kwargs(self):
         context = create_context()
         number = random.randint(100, 200)
