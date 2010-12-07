@@ -16,7 +16,12 @@ class EsiNode(URLNode):
         except KeyError:
             raise EsiTemplateTagError('The esi templatetag requires the esi context processor, but it isn\'t present.')
 
-        url = super(EsiNode, self).render(context)
+        if '/' in self.view_name:
+            # An actual URL has been passed instead of a view name, so use it.
+            url = self.view_name
+        else:
+            url = super(EsiNode, self).render(context)
+
         if self.asvar:
             url = context[self.asvar]
             context[self.asvar] = esi_tmpl % url
