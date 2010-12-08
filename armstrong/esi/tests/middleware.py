@@ -257,7 +257,6 @@ class TestMiddleware(TestCase):
         })
 
         result = full_process_response(request, response)
-        # As long as this doesn't raise a RuntimeError due to infinite
-        # recursion, we're ok.
+        self.assertEqual(result.content, '')
 
         restore_settings(*patch_data)
