@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='armstrong.esi',
-    version='0.2',
+    version='0.3',
     description='Base functionality that needs to be shared widely',
     author='Texas Tribune',
     author_email='tech@texastribune.org',
