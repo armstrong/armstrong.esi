@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.middleware.gzip import GZipMiddleware
@@ -13,11 +14,17 @@ import urllib
 
 from ._utils import TestCase
 from ._utils import with_fake_request
+from .esi_support.views import recursive_404
 
 from .. import middleware
 from ..middleware import IncludeEsiMiddleware, StoreEsiStatusMiddleware
 from ..utils import gunzip_response_content
 
+
+MIDDLEWARES = [
+    'armstrong.esi.middleware.IncludeEsiMiddleware',
+    'armstrong.esi.middleware.StoreEsiStatusMiddleware',
+]
 
 def full_process_response(request, response, gzip=False):
     if gzip:
@@ -25,6 +32,23 @@ def full_process_response(request, response, gzip=False):
     response = StoreEsiStatusMiddleware().process_response(request, response)
     response = IncludeEsiMiddleware().process_response(request, response)
     return response
+
+def patch_settings(new_settings):
+    patches = []
+    added_settings = []
+    for key, value in new_settings.items():
+        if hasattr(settings, key):
+            patches.append(fudge.patcher.patch_object(settings, key, value))
+        else:
+            setattr(settings, key, value)
+            added_settings.append(key)
+    return patches, added_settings
+
+def restore_settings(patches, added_settings):
+    for patch in patches:
+        patch.restore()
+    for setting in added_settings:
+        delattr(settings, setting)
 
 class TestMiddleware(TestCase):
     @with_fake_request
@@ -218,3 +242,22 @@ class TestMiddleware(TestCase):
 
         for headers in vary_sets:
             self.check_merged_vary_header(*headers)
+
+    @with_fake_request
+    def test_recursive_error_pages(self, request):
+
+        request.provides('get_full_path').returns('/')
+        request.provides('build_absolute_uri').returns('http://example.com/')
+        request.has_attr(_esi={'used': True})
+        response = recursive_404(request)
+
+        patch_data = patch_settings({
+            'MIDDLEWARE_CLASSES': MIDDLEWARES,
+            'ESI_PROCESS_ERRORS': False,
+        })
+
+        result = full_process_response(request, response)
+        # As long as this doesn't raise a RuntimeError due to infinite
+        # recursion, we're ok.
+
+        restore_settings(*patch_data)

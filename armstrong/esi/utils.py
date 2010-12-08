@@ -6,6 +6,8 @@ import re
 import time
 from urlparse import urljoin
 
+from django.conf import settings
+from django.http import HttpResponse
 from django.middleware.gzip import GZipMiddleware
 from django.utils.cache import cc_delim_re
 from django.utils.datastructures import MultiValueDict
@@ -115,6 +117,7 @@ def build_full_fragment_url(request, url):
 # TODO: Reduce the lines of codes and varying functionality of this code so its
 #       tests can be reduced in complexity.
 def replace_esi_tags(request, response):
+    process_errors = getattr(settings, 'ESI_PROCESS_ERRORS', False)
     fragment_headers = MultiValueDict()
     fragment_cookies = []
     request_data = {
@@ -126,8 +129,12 @@ def replace_esi_tags(request, response):
     replacement_offset = 0
     for match in esi_tag_re.finditer(response.content):
         url = build_full_fragment_url(request, match.group('url'))
-        client = http_client.Client(**request_data)
-        fragment = client.get(url)
+
+        if response.status_code == 200 or process_errors:
+            client = http_client.Client(**request_data)
+            fragment = client.get(url)
+        else:
+            fragment = HttpResponse()
 
         if fragment.status_code != 200:
             extra = {'data': {

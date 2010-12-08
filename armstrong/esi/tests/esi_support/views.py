@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.utils.cache import cc_delim_re, patch_vary_headers
 from django.utils.http import http_date
 
@@ -28,3 +28,8 @@ def vary(request):
 
 def text(request):
     return HttpResponse('a' * 500)
+
+def recursive_404(request):
+    response = HttpResponseNotFound('<esi:include src="/recursive-404/" />')
+    response._esi = {'used': True}
+    return response

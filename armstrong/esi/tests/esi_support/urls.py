@@ -7,4 +7,5 @@ urlpatterns = patterns('armstrong.esi.tests.esi_support.views',
     url(r'^last-modified/(?P<timestamp>\d+)/$', 'last_modified', name='last_modified'),
     url(r'^vary/$', 'vary', name='vary'),
     url(r'^500chars/$', 'text', name='text'),
+    url(r'^recursive-404/$', 'recursive_404', name='recursive_404'),
 )
