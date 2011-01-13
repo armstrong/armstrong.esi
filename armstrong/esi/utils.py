@@ -137,14 +137,14 @@ def replace_esi_tags(request, response):
             fragment = HttpResponse()
 
         if fragment.status_code != 200:
+            # Remove the error content so it isn't added to the page.
+            fragment.content = ''
             extra = {'data': {
                 'fragment': fragment.__dict__,
                 'request': request.__dict__,
             }}
             log.error('ESI fragment %s returned status code %s' %
                 (url, fragment.status_code), extra=extra)
-            # Remove the error content so it isn't added to the page.
-            fragment.content = ''
 
         start = match.start() + replacement_offset
         end = match.end() + replacement_offset
