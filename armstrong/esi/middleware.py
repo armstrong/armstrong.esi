@@ -13,8 +13,7 @@ esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 class IncludeEsiMiddleware(object):
     def process_response(self, request, response):
-        esi_status = getattr(response, '_esi', {'used': False})
-        if not esi_status['used']:
+        if not 'X-ESI' in response:
             return response
 
         # There is the possibility that GZipMiddleware has already been loaded by
