@@ -36,7 +36,7 @@ class IncludeEsiMiddleware(object):
 
         return response
 
-class StoreEsiStatusMiddleware(object):
+class EsiHeaderMiddleware(object):
     def process_response(self, request, response):
         if hasattr(request, '_esi'):
             response['X-ESI'] = 'true'

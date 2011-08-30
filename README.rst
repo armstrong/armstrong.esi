@@ -51,10 +51,10 @@ the URL for that view.
 Using with Varnish
 """"""""""""""""""
 
-`Varnish`_ integrates fairly easily with armstrong.esi. The
-StoreEsiStatusMiddleware sets the 'X-ESI' header to 'true' if the page request
-has esi tags on it.  To enable esi processing in varnish for pages that need it 
-add the following to your vcl_fetch method::
+`Varnish`_ integrates fairly easily with armstrong.esi. The EsiHeaderMiddleware
+sets the 'X-ESI' header to 'true' if the page request has esi tags on it.  To
+enable esi processing in varnish for pages that need it add the following to
+your vcl_fetch method::
 
     if (beresp.http.X-ESI) {
         set beresp.do_esi = true;
