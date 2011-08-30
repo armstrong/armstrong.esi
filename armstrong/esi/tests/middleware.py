@@ -17,19 +17,19 @@ from ._utils import with_fake_request
 from .esi_support.views import recursive_404
 
 from .. import middleware
-from ..middleware import IncludeEsiMiddleware, StoreEsiStatusMiddleware
+from ..middleware import IncludeEsiMiddleware, EsiHeaderMiddleware
 from ..utils import gunzip_response_content
 
 
 MIDDLEWARES = [
     'armstrong.esi.middleware.IncludeEsiMiddleware',
-    'armstrong.esi.middleware.StoreEsiStatusMiddleware',
+    'armstrong.esi.middleware.EsiHeaderMiddleware',
 ]
 
 def full_process_response(request, response, gzip=False):
     if gzip:
         response = GZipMiddleware().process_response(request, response)
-    response = StoreEsiStatusMiddleware().process_response(request, response)
+    response = EsiHeaderMiddleware().process_response(request, response)
     response = IncludeEsiMiddleware().process_response(request, response)
     return response
 
