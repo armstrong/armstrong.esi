@@ -13,7 +13,7 @@ esi_tag_re = re.compile(r'<esi:include src="(?P<url>[^"]+?)"\s*/>', re.I)
 
 class IncludeEsiMiddleware(object):
     def process_response(self, request, response):
-        esi_status = getattr(response, '_esi', {'used': False})
+        esi_status = getattr(request, '_esi', {'used': False})
         if not esi_status['used']:
             return response
 
@@ -36,8 +36,8 @@ class IncludeEsiMiddleware(object):
 
         return response
 
-class StoreEsiStatusMiddleware(object):
+class EsiHeaderMiddleware(object):
     def process_response(self, request, response):
         if hasattr(request, '_esi'):
-            response._esi = request._esi
+            response['X-ESI'] = 'true'
         return response
