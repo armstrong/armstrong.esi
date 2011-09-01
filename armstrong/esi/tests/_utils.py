@@ -15,6 +15,8 @@ def with_fake_request(func):
     return inner
 
 class TestCase(DjangoTestCase):
+    urls = 'armstrong.esi.tests.esi_support.urls'
+
     def setUp(self):
         self._original_settings = settings
         fudge.clear_expectations()

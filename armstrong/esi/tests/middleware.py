@@ -51,6 +51,7 @@ def restore_settings(patches, added_settings):
         delattr(settings, setting)
 
 class TestMiddleware(TestCase):
+
     @with_fake_request
     def test_returns_unmodified_response_on_non_esi_response(self, request):
         original_content = str(random.randint(1000, 2000))
@@ -71,9 +72,13 @@ class TestMiddleware(TestCase):
         esi_tag = '<esi:include src="%s" />' % url
         response.content = esi_tag
 
+        patch_data = patch_settings({'MIDDLEWARE_CLASSES': MIDDLEWARES})
+
         result = full_process_response(request, response)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
+
+        restore_settings(*patch_data)
 
     @with_fake_request
     def test_replaces_esi_tags_in_gzipped_response(self, request):
@@ -86,12 +91,16 @@ class TestMiddleware(TestCase):
         esi_tag = '<esi:include src="/500chars/" />'
         response.content = '%s%s%s' % ('z' * 250, esi_tag, 'z' * 250)
 
+        patch_data = patch_settings({'MIDDLEWARE_CLASSES': MIDDLEWARES})
+
         result = full_process_response(request, response, gzip=True)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertTrue(result.get('Content-Encoding', None) == 'gzip')
 
         gunzip_response_content(result)
         self.assertTrue(re.search('a' * 500, result.content))
+
+        restore_settings(*patch_data)
 
     @with_fake_request
     def test_replaces_relative_url_esi(self, request):
@@ -107,9 +116,13 @@ class TestMiddleware(TestCase):
         response.content = esi_tag
         fudge.clear_calls()
 
+        patch_data = patch_settings({'MIDDLEWARE_CLASSES': MIDDLEWARES})
+
         result = full_process_response(request, response)
         self.assertFalse(re.search(esi_tag, result.content), msg='sanity check')
         self.assertEquals(result.content, str(rand))
+
+        restore_settings(*patch_data)
 
     @with_fake_request
     def check_content_permutation(self, request, permutation, chunk_results):
@@ -119,10 +132,14 @@ class TestMiddleware(TestCase):
         request.provides('build_absolute_uri').returns(
             'http://example.com%s' % request_url)
 
+        patch_data = patch_settings({'MIDDLEWARE_CLASSES': MIDDLEWARES})
+
         response = HttpResponse(''.join(permutation))
         expected_result = ''.join(chunk_results[chunk] for chunk in permutation)
         result = full_process_response(request, response)
         self.assertEqual(result.content, expected_result)
+
+        restore_settings(*patch_data)
 
     # TODO: This is a slow test that should be adjusted for so it doesn't take up
     #       > 80% of the execution time.
