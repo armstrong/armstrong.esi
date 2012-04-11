@@ -1,6 +1,7 @@
-from ._utils import *
+from armstrong.dev.tasks import *
 
 settings = {
+    'DEBUG': True,
     'INSTALLED_APPS': (
         'armstrong.esi',
         'armstrong.esi.tests.esi_support',
@@ -12,13 +13,8 @@ settings = {
     'DEBUG_PROPAGATE_EXCEPTIONS': True,
 }
 
-@task
-def test():
-    run_tests(settings, 'esi_support', 'esi')
 
-@task
-def shell():
-    from d51.django.virtualenv.base import VirtualEnvironment
-    v = VirtualEnvironment()
-    v.run(settings)
-    v.call_command('shell')
+full_name = "armstrong.esi"
+main_app = "esi"
+tested_apps = ("esi", )
+pip_install_first = True
