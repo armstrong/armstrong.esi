@@ -2,6 +2,8 @@ armstrong.esi
 =============
 Django application for handling `edge side include (ESI)`_
 
+.. _edge side include (ESI): http://en.wikipedia.org/wiki/Edge_Side_Includes
+
 Usage
 -----
 ESI allows you to specify sections of the site that require different caching
@@ -37,6 +39,8 @@ This replaces our ``{% esi %}`` tag with a ``<esi:include>`` tag pointing to
 the URL for that view.
 
 
+.. _Varnish: http://www.varnish-cache.org/
+
 Using with Varnish
 """"""""""""""""""
 
@@ -53,7 +57,7 @@ your vcl_fetch method::
 Loading without ESI
 """""""""""""""""""
 
-The template tag reads the ``DEBUG`` settings value [#]_ and if set to ``True``
+The template tag reads the ``DEBUG`` settings value and if set to ``True``
 renders the view with the current request rather than including the
 ``<esi:include>`` tag. This makes it easy to see fully rendered pages in development.
 
@@ -72,6 +76,11 @@ add this however you like.  This works as a copy-and-paste solution:
 ::
 
     INSTALLED_APPS += ["armstrong.esi"]
+
+You must also enable the armstrong.esi middleware. To do this, add the following 
+line to your ``MIDDLEWARE_CLASSES``::
+
+    'armstrong.esi.middleware.EsiMiddleware'
 
 .. _pip: http://www.pip-installer.org/
 
