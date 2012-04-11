@@ -1,40 +1,29 @@
-Armstrong ESI
+armstrong.esi
 =============
 Django application for handling `edge side include (ESI)`_
 
-.. warning::
-   This document is speculative until this warning is removed.  Don't expect
-   the awesomeness described within as long as this is here.
-
-.. warning::
-   This is a proof of concept level package.  Don't use it in production unless
-   you're willing to put up with potentially buggy code, bad performance, and
-   all manner of things going wrong.  If you're cool by that, go for it.
-
-Hows and Whys
--------------
-
+Usage
+-----
 ESI allows you to specify sections of the site that require different caching
 strategies and can be sent to a smart caching layer for rendering.
 
 For example, if you want to send a page that is identical for every user except
-for a welcome message, you would render that message like::
+for a welcome message, you could render that message like::
 
     <html>
       <body>
-        <esi:include "/esi/welcome-message.html" />
+        <esi:include "/esi/welcome-message" />
         ... the rest of the page ...
       </body>
     </html>
 
 A smart proxy such as `Varnish`_ and the middleware included with
-``armstrong.esi`` can cache this page, then render it dropping in the dynamic
-portions without having to talk to the app server again.
+``armstrong.esi`` can cache this page, and send a request for /esi/welcome-message
+for personalization. The next user hitting the page would get the cached version and
+your application server would only need to render /esi/welcome-message
 
-Use this package to specify sections of your templates that can be rendered via
-ESI.  You call the ``{% esi %}`` template tag and give it the name of a
-registered view and it will replace itself with the appropriate
-``<esi:include>`` tag.  For example, the above example becomes::
+armstrong.esi provides a template tag for rendering the correct urls with the same
+syntax as django's url tag. For example, the above example becomes::
 
     {% load esi %}
     <html>
@@ -53,7 +42,7 @@ Using with Varnish
 
 `Varnish`_ integrates fairly easily with armstrong.esi. The EsiHeaderMiddleware
 sets the 'X-ESI' header to 'true' if the page request has esi tags on it.  To
-enable esi processing in varnish for pages that need it add the following to
+enable esi processing in varnish for pages that need it, add the following to
 your vcl_fetch method::
 
     if (beresp.http.X-ESI) {
@@ -66,64 +55,72 @@ Loading without ESI
 
 The template tag reads the ``DEBUG`` settings value [#]_ and if set to ``True``
 renders the view with the current request rather than including the
-``<esi:include>`` tag.
-
-You can change this default behavior to through several settings:
-
-``TT_ESI_FORCE``
-    Setting to ``True`` means that a ``<esi::include>`` tag will always be
-    generated.  (Default: ``False``)
-``TT_ESI_NEVER``
-    Setting to ``True`` means that a ``<esi:include>`` tag will never be
-    generated.  The ``TT_ESI_FORCE`` setting always takes precedence.  Any time
-    it is set, this value has no meaning.  (Default: ``True``)
-
-Installation
-------------
-Recommending installation is through `pip`_::
-
-    prompt> pip install -e git://github.com/texastribune/armstrong.esi#egg=armstrong.esi
-
-Once installed, you must add the app to your ``INSTALLED_APPS`` inside your
-settings::
-
-    'armstrong.esi',
-
-You must also enable the custom middleware if you want to use the internal ESI
-caching.  To do this, add the following line to your ``MIDDLEWARE_CLASSES``::
-
-    'armstrong.esi.middleware.EsiMiddleware',
+``<esi:include>`` tag. This makes it easy to see fully rendered pages in development.
 
 
-Internal Middleware
--------------------
+Installation & Configuration
+----------------------------
+You can install the latest release of ``armstrong.esi`` using `pip`_:
 
-Edge-Side Includes are great for increasing the cachability of your pages, but
-they traditionally require additional overhead to get running.
-``armstrong.esi`` includes a middleware that can handle the caching for you so
-you don't have to setup and maintain any additional server hardware.
+::
 
-.. todo:: add information explaining what is happening
+    pip install armstrong.apps.articles
+
+Make sure to add ``armstrong.esi`` to your ``INSTALLED_APPS``.  You can 
+add this however you like.  This works as a copy-and-paste solution:
+
+::
+
+    INSTALLED_APPS += ["armstrong.esi"]
+
+.. _pip: http://www.pip-installer.org/
 
 
 Contributing
 ------------
-Contributions are welcomed and encouraged.  Please follow these instructions
-for making a contribution:
 
-* Fork this repository
-* Create a topic branch.  Be descriptive with its name.
-* Make some great addition, fix a bug, or clean it up
-* Submit a Pull Request
+* Create something awesome -- make the code better, add some functionality,
+  whatever (this is the hardest part).
+* `Fork it`_
+* Create a topic branch to house your changes
+* Get all of your commits in the new topic branch
+* Submit a `pull request`_
 
-You can also report bugs via `Issue Tracker`_.
+.. _pull request: http://help.github.com/pull-requests/
+.. _Fork it: http://help.github.com/forking/
 
 
-.. _edge side include (ESI): http://en.wikipedia.org/wiki/Edge_Side_Includes
-.. _Wikipedia article: http://en.wikipedia.org/wiki/Edge_Side_Includes 
-.. _pip: http://pip.openplans.org
-.. _Varnish: http://www.varnish-cache.org/
-.. _Issue Tracker: https://github.com/texastribune/armstrong.esi/issues
+State of Project
+----------------
+Armstrong is an open-source news platform that is freely available to any
+organization.  It is the result of a collaboration between the `Texas Tribune`_
+and `Bay Citizen`_, and a grant from the `John S. and James L. Knight
+Foundation`_.  The first release is scheduled for June, 2011.
 
-.. rubric:: Footnotes
-.. [#] http://docs.djangoproject.com/en/1.2/ref/settings/#debug
+To follow development, be sure to join the `Google Group`_.
+
+``armstrong.apps.articles`` is part of the `Armstrong`_ project.  You're
+probably looking for that.
+
+.. _Texas Tribune: http://www.texastribune.org/
+.. _Bay Citizen: http://www.baycitizen.org/
+.. _John S. and James L. Knight Foundation: http://www.knightfoundation.org/
+.. _Google Group: http://groups.google.com/group/armstrongcms
+.. _Armstrong: http://www.armstrongcms.org/
+
+
+License
+-------
+Copyright 2011-2012 Bay Citizen and Texas Tribune
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
