@@ -1,0 +1,3 @@
+include README.rst
+include package.json
+prune build/*
