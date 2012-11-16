@@ -4,3 +4,5 @@ lib/*
 src/*
 *.pyc
 share/*
+MANIFEST
+dist/
