@@ -80,7 +80,7 @@ add this however you like.  This works as a copy-and-paste solution:
 You must also enable the armstrong.esi middleware. To do this, add the following 
 line to your ``MIDDLEWARE_CLASSES``::
 
-    'armstrong.esi.middleware.EsiMiddleware'
+    'armstrong.esi.middleware.EsiHeaderMiddleware'
 
 .. _pip: http://www.pip-installer.org/
 
