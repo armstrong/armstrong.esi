@@ -6,3 +6,4 @@ src/*
 share/*
 MANIFEST
 dist/
+*.egg-info
