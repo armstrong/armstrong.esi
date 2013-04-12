@@ -12,7 +12,7 @@ class EsiTemplateTagError(Exception):
 class EsiNode(URLNode):
     def __init__(self, *args, **kwargs):
         super(EsiNode, self).__init__(*args, **kwargs)
-        if '/' in self.view_name:
+        if '/' in str(self.view_name):
             # An actual URL has been passed instead of a view name.
             self.raw_url = self.view_name
             self.view_name = None
