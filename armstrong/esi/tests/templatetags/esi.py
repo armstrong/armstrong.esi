@@ -31,7 +31,7 @@ class TestOfEsiNode(TestCase):
 
     def test_renders_relative_esi(self):
         context = create_context()
-        node = esi(Parser([]), create_token('esi ./blah/'))
+        node = esi(Parser([]), create_token('esi "./blah/"'))
         result = node.render(context)
 
         expected_url = './blah/'
