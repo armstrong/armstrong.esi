@@ -61,8 +61,8 @@ class TestOfEsiHandler(TestCase):
         token.expects('split_contents').returns(('esi', random_view_name))
         fudge.clear_calls()
 
-        result = esi(None, token)
-        self.assertEquals(result.view_name, random_view_name)
+        result = esi(Parser([]), token)
+        self.assertEquals(str(result.view_name), random_view_name)
 
         fudge.verify()
 
