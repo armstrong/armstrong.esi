@@ -74,7 +74,8 @@ class TestOfEsiHandler(TestCase):
     def test_can_be_rendered_from_a_template(self):
         raw_template = """
         {% load esi %}
-        {% esi hello_world %}
+        {% load url from future %}
+        {% esi "hello_world" %}
         """
 
         t = template.Template(raw_template)
