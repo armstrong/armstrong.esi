@@ -96,3 +96,15 @@ class TestOfEsiHandler(TestCase):
         result = t.render(context).strip()
         expected_url = reverse('hello_world')
         self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
+
+    def test_can_be_rendered_using_old_url_syntax(self):
+        raw_template = """
+        {% load esi %}
+        {% esi hello_world %}
+        """
+
+        t = template.Template(raw_template)
+        context = create_context()
+        result = t.render(context).strip()
+        expected_url = reverse('hello_world')
+        self.assertEquals(result, '<esi:include src="%s" />' % expected_url)
