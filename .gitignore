@@ -1,4 +1,6 @@
+.tox/
 bin/
+coverage/
 include/*
 lib/*
 src/*
@@ -6,3 +8,4 @@ src/*
 share/*
 MANIFEST
 dist/
+*.egg-info

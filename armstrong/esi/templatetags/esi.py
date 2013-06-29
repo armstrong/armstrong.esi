@@ -1,6 +1,7 @@
 from django import template
 from django.template import defaulttags
 from django.template.defaulttags import URLNode
+from django.utils.text import unescape_string_literal
 
 
 register = template.Library()
@@ -10,11 +11,23 @@ class EsiTemplateTagError(Exception):
     pass
 
 class EsiNode(URLNode):
-    def __init__(self, *args, **kwargs):
-        super(EsiNode, self).__init__(*args, **kwargs)
-        if '/' in self.view_name:
+    def __init__(self, view_name, *args, **kwargs):
+        # Compatibility with Django 1.5 and later
+        if hasattr(view_name, 'token'):
+            try:
+                unescape_string_literal(view_name.token)
+            except ValueError:
+                # If we cannot unescape the token then it is not quoted.
+                # We have to cancel the variables's lookups and tell it
+                # that it has a literal value.
+                view_name.var.lookups = None
+                view_name.var.literal = view_name.token
+
+        super(EsiNode, self).__init__(view_name, *args, **kwargs)
+
+        if '/' in str(self.view_name):
             # An actual URL has been passed instead of a view name.
-            self.raw_url = self.view_name
+            self.raw_url = unescape_string_literal(str(self.view_name))
             self.view_name = None
         else:
             self.raw_url = None
